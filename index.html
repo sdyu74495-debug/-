@@ -1,388 +1,821 @@
+
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المحرر الذكي للمستندات</title>
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <title>تطبيق صِياغَة (Siyagha) | محرر الوثائق الذكي</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            900: '#064e3b',
+                            950: '#022c22'
+                        },
+                        slate: {
+                            850: '#131c2e',
+                            900: '#0f172a',
+                            950: '#020617'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Mammoth.js لقراءة واستخراج ملفات Word (.docx) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Cairo', sans-serif; background-color: #f4f5f7; color: #000; direction: rtl; }
+        .font-amiri { font-family: 'Amiri', 'Traditional Arabic', serif; }
+        .font-cairo { font-family: 'Cairo', sans-serif; }
+        .font-tajawal { font-family: 'Tajawal', sans-serif; }
+        .font-traditional { font-family: 'Traditional Arabic', 'Amiri', serif; }
 
-        .app-container { display: flex; flex-direction: column; min-height: 100vh; padding: 12px; max-width: 1300px; margin: 0 auto; gap: 12px; }
-        
-        header { background: #111; color: #fff; padding: 14px; border-radius: 8px; text-align: center; }
-        header h1 { font-size: 1.25rem; margin-bottom: 2px; }
-        header p { font-size: 0.8rem; color: #bbb; }
-
-        .main-content { display: flex; flex-direction: column; gap: 12px; }
-        @media (min-width: 992px) {
-            .main-content { display: grid; grid-template-columns: 440px 1fr; align-items: start; }
+        body {
+            background-color: #09090b;
+            color: #f1f5f9;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(51, 65, 85, 0.08) 0px, transparent 50%);
+            background-attachment: fixed;
         }
 
-        .panel { background: #fff; padding: 14px; border-radius: 8px; border: 1px solid #ddd; }
-        .section-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+        .title-emerald-slate {
+            background: linear-gradient(135deg, #f8fafc 0%, #a7f3d0 45%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.15));
+        }
 
-        .templates-container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-        .btn-template { background: #f0f0f0; color: #000; border: 1px solid #bbb; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 0.78rem; font-family: inherit; font-weight: 600; }
-        .btn-template:hover { background: #000; color: #fff; }
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: #ffffff !important;
+            color: #000000 !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+            box-sizing: border-box;
+            position: relative;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            margin: 0 auto;
+            transition: all 0.2s ease-in-out;
+        }
 
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-        .form-group { margin-bottom: 8px; }
-        .form-group.full { grid-column: span 2; }
-        label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 3px; }
-        select, input[type="text"], textarea { width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.85rem; }
-        textarea { height: 180px; resize: vertical; line-height: 1.5; }
+        .page-border-classic {
+            border: 2px solid #000000;
+            outline: 1px solid #000000;
+            outline-offset: -6px;
+        }
 
-        .stats-bar { font-size: 0.75rem; color: #555; margin-bottom: 8px; text-align: left; }
+        .page-break-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-top: 2px dashed #059669;
+            opacity: 0.75;
+            pointer-events: none;
+            z-index: 20;
+        }
 
-        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
-        .btn { padding: 9px; border: none; border-radius: 4px; cursor: pointer; font-weight: 700; font-size: 0.85rem; font-family: inherit; text-align: center; }
-        .btn-word { background: #000; color: #fff; }
-        .btn-pdf { background: #333; color: #fff; }
-        .btn-secondary { background: #eee; color: #000; border: 1px solid #ccc; }
-        .btn-danger { background: #fff; color: #a00; border: 1px solid #a00; }
+        .page-break-badge {
+            position: absolute;
+            left: 12px;
+            top: -11px;
+            background: #059669;
+            color: #ffffff;
+            font-size: 10px;
+            font-family: 'Tajawal', sans-serif;
+            padding: 1px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
 
-        /* معاينة المستند */
-        .preview-wrapper { background: #555; padding: 10px; border-radius: 8px; overflow-x: auto; display: flex; justify-content: center; }
-        .paper { background: #fff; color: #000; width: 100%; max-width: 210mm; min-height: 297mm; padding: 20mm 18mm; border: 1px solid #888; box-sizing: border-box; transition: all 0.2s; }
-
-        /* عناصر النص داخل المعاينة */
-        .doc-header-text { text-align: center; font-size: 10pt; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 12px; }
-        .doc-title { text-align: center; font-weight: bold; margin-bottom: 16px; border-bottom: 2px solid #000; padding-bottom: 6px; }
-        .doc-heading { font-weight: bold; margin-top: 12px; margin-bottom: 4px; text-decoration: underline; page-break-after: avoid; }
-        .doc-paragraph { text-align: justify; text-justify: inter-word; margin-bottom: 6px; }
-        .doc-term { margin-bottom: 6px; text-align: justify; }
-        .doc-term-bold { font-weight: bold; }
-        .doc-date { text-align: right; font-weight: bold; font-size: 10pt; margin-top: 15px; }
-        .doc-closing { text-align: left; font-weight: bold; margin-top: 20px; page-break-inside: avoid; }
-
-        /* الطباعة */
         @media print {
-            body { background: #fff; }
-            .app-container, .main-content { display: block; padding: 0; margin: 0; }
-            header, .panel { display: none !important; }
-            .preview-wrapper { background: #fff; padding: 0; border-radius: 0; }
-            .paper { border: none; width: 100%; max-width: none; min-height: auto; padding: 0 !important; margin: 0; box-shadow: none; }
-            @page { size: A4; margin: 2cm 1.5cm; }
+            body { background: #ffffff !important; color: #000000 !important; }
+            .no-print, .page-break-line { display: none !important; }
+            #print-area {
+                position: absolute; left: 0; top: 0; width: 100% !important; margin: 0 !important; box-shadow: none !important; border: none !important;
+            }
+            @page { size: A4 portrait; margin: 15mm 15mm 15mm 15mm; }
         }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #09090b; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
     </style>
 </head>
-<body>
+<body class="font-tajawal min-h-screen flex flex-col justify-between selection:bg-emerald-600 selection:text-white">
 
-<div class="app-container">
-    <header>
-        <h1>⚖️ المحرر والمنظم الذكي للمستندات</h1>
-        <p>تنسيق فوري محترف أحادي اللون متوافق 100% مع الطباعة وتطبيقات الموبايل</p>
-    </header>
-
-    <div class="main-content">
-        <!-- لوحة الإعدادات -->
-        <div class="panel">
-            <div class="section-title">⚡ نماذج تجريبية سريعة</div>
-            <div class="templates-container">
-                <button class="btn-template" onclick="loadTemplate('complaint')">📝 شكوى ضد زميل</button>
-                <button class="btn-template" onclick="loadTemplate('defense')">⚖️ مذكرة دفاع</button>
-                <button class="btn-template" onclick="loadTemplate('terms')">📚 مصطلحات وتعاريف</button>
-                <button class="btn-template" onclick="loadTemplate('minutes')">📑 محضر اجتماع</button>
-            </div>
-
-            <div class="form-grid">
-                <div class="form-group full">
-                    <label for="fileName">اسم الملف عند التصدير:</label>
-                    <input type="text" id="fileName" value="مستند_مُنظم" placeholder="اكتب اسم الملف...">
+    <!-- الترويسة العلوية الفخمة برصانة وألوان هادئة -->
+    <header class="no-print bg-zinc-950/90 backdrop-blur-xl border-b border-emerald-900/40 sticky top-0 z-40 px-4 py-3.5 shadow-xl">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            
+            <!-- عنوان التطبيق والآية القرآنية -->
+            <div class="flex flex-col items-center md:items-start text-center md:text-right">
+                <div class="flex items-baseline space-x-2 space-x-reverse">
+                    <h1 class="font-extrabold text-2xl md:text-3xl tracking-tight title-emerald-slate">
+                        صِياغَة
+                    </h1>
+                    <span class="font-bold text-xs md:text-sm tracking-widest text-emerald-400/90 font-mono px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/40">
+                        (Siyagha)
+                    </span>
                 </div>
+                
+                <div class="w-full h-[1px] my-1 bg-gradient-to-r from-transparent via-emerald-800/40 to-transparent"></div>
 
-                <div class="form-group">
-                    <label for="fontSelect">نوع الخط:</label>
-                    <select id="fontSelect" onchange="updatePreview()">
-                        <option value="'Amiri', serif">Amiri (أميـري)</option>
-                        <option value="'Tajawal', sans-serif">Tajawal (تجول)</option>
-                        <option value="'Cairo', sans-serif">Cairo (القاهرة)</option>
-                        <option value="'Traditional Arabic', serif">Traditional Arabic</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="fontSize">حجم الخط:</label>
-                    <select id="fontSize" onchange="updatePreview()">
-                        <option value="12pt">12pt (قياسي)</option>
-                        <option value="13pt" selected>13pt (مناسب)</option>
-                        <option value="14pt">14pt (كبير)</option>
-                        <option value="16pt">16pt (عنوان)</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="lineHeight">تباعد الأسطر:</label>
-                    <select id="lineHeight" onchange="updatePreview()">
-                        <option value="1.2">مضغوط (1.2)</option>
-                        <option value="1.4" selected>متوسط (1.4)</option>
-                        <option value="1.6">مزدوج (1.6)</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="marginSelect">هوامش الورقة:</label>
-                    <select id="marginSelect" onchange="updatePreview()">
-                        <option value="15mm 12mm">ضيقة (1.5 سم)</option>
-                        <option value="20mm 18mm" selected>قياسية (2.0 سم)</option>
-                        <option value="28mm 22mm">واسعة (2.8 سم)</option>
-                    </select>
-                </div>
-
-                <div class="form-group full">
-                    <label for="headerText">الترويسة العلوية (اختياري):</label>
-                    <input type="text" id="headerText" oninput="updatePreview()" placeholder="مثال: جامعة القاهرة - كلية الحقوق">
+                <div class="font-amiri text-emerald-300/90 text-sm md:text-base font-bold tracking-widest flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>﴿عَلَّمَ الْإِنسَانَ مَا لَمْ يَعْلَمْ﴾</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="inputText">النص المراد تنسيقه:</label>
-                <textarea id="inputText" oninput="updatePreview()" placeholder="اكتب النص هنا..."></textarea>
-            </div>
+            <!-- أزرار الإجراءات الرئيسية -->
+            <div class="flex items-center space-x-2 space-x-reverse w-full md:w-auto justify-end flex-wrap gap-y-2">
+                <button onclick="triggerFileInput()" class="flex-1 md:flex-none flex items-center justify-center space-x-1.5 space-x-reverse bg-zinc-900 hover:bg-zinc-800 text-emerald-300 border border-emerald-800/40 font-bold px-3.5 py-2 rounded-xl text-xs md:text-sm transition-all active:scale-95 shadow-md">
+                    <span>📥</span>
+                    <span>استيراد مستند (.docx / .txt)</span>
+                </button>
+                <input type="file" id="file-import-input" accept=".txt,.docx" onchange="handleFileUpload(event)" class="hidden">
 
-            <div class="stats-bar" id="statsBar">عدد الكلمات: 0 | الفقرات: 0</div>
+                <button onclick="exportToWord()" class="flex-1 md:flex-none flex items-center justify-center space-x-1.5 space-x-reverse bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-4 py-2 rounded-xl text-xs md:text-sm transition-all shadow-lg active:scale-95">
+                    <span>📄</span>
+                    <span>تصدير Word (.doc)</span>
+                </button>
 
-            <div class="form-group">
-                <label><input type="checkbox" id="addDate" onchange="updatePreview()"> إضافة تاريخ اليوم أسفل المستند تلقائياً</label>
-            </div>
-
-            <div class="actions-grid">
-                <button class="btn btn-word" onclick="exportWord()">📄 تصدير Word</button>
-                <button class="btn btn-pdf" onclick="exportPDF()">🖨️ طباعة / PDF</button>
-                <button class="btn btn-secondary" onclick="copyFormattedText()">📋 نسخ النص</button>
-                <button class="btn btn-danger" onclick="clearText()">🗑️ مسح النص</button>
+                <button onclick="printDocument()" class="flex-1 md:flex-none flex items-center justify-center space-x-1.5 space-x-reverse bg-zinc-800 hover:bg-zinc-700 text-slate-200 border border-zinc-700 font-bold px-3.5 py-2 rounded-xl text-xs md:text-sm transition-all active:scale-95">
+                    <span>🖨️</span>
+                    <span>طباعة / PDF</span>
+                </button>
             </div>
         </div>
+    </header>
 
-        <!-- المعاينة الحية -->
-        <div class="preview-wrapper">
-            <div id="paper" class="paper">
-                <div id="docContent"></div>
+    <!-- بيئة العمل الرئيسية -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden max-w-[1800px] w-full mx-auto">
+        
+        <!-- اللوحة الجانبية للمحرر والإعدادات -->
+        <aside class="no-print w-full lg:w-[480px] xl:w-[520px] bg-zinc-900/60 border-b lg:border-b-0 lg:border-l border-zinc-800 flex flex-col h-auto lg:h-[calc(100vh-80px)]">
+            
+            <!-- أزرار تبويب العرض للهواتف الذكية -->
+            <div class="flex lg:hidden bg-zinc-950 p-1.5 border-b border-zinc-800">
+                <button id="tab-editor-btn" onclick="switchMobileTab('editor')" class="flex-1 py-2 text-center text-xs font-bold rounded-lg bg-zinc-800 text-emerald-400 shadow">✍️ المحرر والإعدادات</button>
+                <button id="tab-preview-btn" onclick="switchMobileTab('preview')" class="flex-1 py-2 text-center text-xs font-bold rounded-lg text-slate-400">📄 المعاينة الحية (A4)</button>
+            </div>
+
+            <div id="editor-panel" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scroll">
+                
+                <!-- النماذج التجريبية السريعة -->
+                <div class="bg-zinc-950/70 p-3 rounded-xl border border-zinc-800/80 space-y-2">
+                    <label class="block text-xs font-bold text-emerald-400 tracking-wide">⚡ استدعاء نموذج تجريبي سريع:</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="loadSample('student')" class="bg-zinc-900 hover:bg-zinc-800 text-xs py-2 px-2.5 rounded-lg border border-zinc-800 transition text-right text-slate-200 flex items-center justify-between group active:scale-95">
+                            <span class="font-bold group-hover:text-emerald-400 transition">📝 شكوى طالب</span>
+                            <span class="text-slate-500 text-[10px] bg-zinc-950 px-1.5 py-0.5 rounded">أكاديمي</span>
+                        </button>
+                        <button onclick="loadSample('legal')" class="bg-zinc-900 hover:bg-zinc-800 text-xs py-2 px-2.5 rounded-lg border border-zinc-800 transition text-right text-slate-200 flex items-center justify-between group active:scale-95">
+                            <span class="font-bold group-hover:text-emerald-400 transition">⚖️ مذكرة دفاع</span>
+                            <span class="text-slate-500 text-[10px] bg-zinc-950 px-1.5 py-0.5 rounded">قانوني</span>
+                        </button>
+                        <button onclick="loadSample('terms')" class="bg-zinc-900 hover:bg-zinc-800 text-xs py-2 px-2.5 rounded-lg border border-zinc-800 transition text-right text-slate-200 flex items-center justify-between group active:scale-95">
+                            <span class="font-bold group-hover:text-emerald-400 transition">📚 مصطلحات وتعاريف</span>
+                            <span class="text-slate-500 text-[10px] bg-zinc-950 px-1.5 py-0.5 rounded">علمي</span>
+                        </button>
+                        <button onclick="loadSample('meeting')" class="bg-zinc-900 hover:bg-zinc-800 text-xs py-2 px-2.5 rounded-lg border border-zinc-800 transition text-right text-slate-200 flex items-center justify-between group active:scale-95">
+                            <span class="font-bold group-hover:text-emerald-400 transition">📊 محضر اجتماع</span>
+                            <span class="text-slate-500 text-[10px] bg-zinc-950 px-1.5 py-0.5 rounded">إداري</span>
+                        </button>
+                        <button onclick="loadSample('official_letter')" class="col-span-2 bg-zinc-900 hover:bg-zinc-800 text-xs py-2 px-2.5 rounded-lg border border-zinc-800 transition text-right text-slate-200 flex items-center justify-between group active:scale-95">
+                            <span class="font-bold group-hover:text-emerald-400 transition">✉️ خطاب رسمي وطلب عام</span>
+                            <span class="text-slate-500 text-[10px] bg-zinc-950 px-1.5 py-0.5 rounded">عام / رسميات</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- الترويسة العلوية للمستند -->
+                <div>
+                    <label for="custom-header-input" class="block text-xs font-bold text-slate-400 mb-1">🏷️ الترويسة العلوية للمستند (اختياري):</label>
+                    <input 
+                        type="text" 
+                        id="custom-header-input" 
+                        oninput="updateFormatting()"
+                        placeholder="مثال: جامعة القاهرة - كلية الحقوق / أو اسم المكتب"
+                        class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition"
+                    >
+                </div>
+
+                <!-- صندوق الكتابة وشريط الأدوات السريع -->
+                <div class="flex flex-col">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="raw-text" class="text-xs font-bold text-slate-200">✍️ النص المراد تنسيقه:</label>
+                        <div class="flex items-center space-x-3 space-x-reverse">
+                            <button onclick="copyFormattedText()" class="text-xs text-slate-400 hover:text-emerald-400 transition flex items-center gap-1">
+                                <span>📋</span>
+                                <span>نسخ النص</span>
+                            </button>
+                            <button onclick="promptClearText()" class="text-xs text-rose-400 hover:text-rose-300 transition flex items-center gap-1">
+                                <span>🗑️</span>
+                                <span>مسح النص</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- شريط تنسيق التحديد السريع -->
+                    <div class="flex items-center gap-1.5 bg-zinc-950 p-1.5 rounded-t-xl border border-b-0 border-zinc-800 text-xs overflow-x-auto">
+                        <span class="text-[11px] font-bold text-slate-400 pl-1 whitespace-nowrap">تنسيق التحديد:</span>
+                        <button type="button" onclick="applySelectionFormatting('bold')" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-800 rounded font-bold transition flex items-center gap-1">
+                            <span><b>B</b></span>
+                            <span>تغميق</span>
+                        </button>
+                        <button type="button" onclick="applySelectionFormatting('underline')" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-800 rounded font-bold transition flex items-center gap-1">
+                            <span><u>U</u></span>
+                            <span>خط تحتي</span>
+                        </button>
+                        <button type="button" onclick="applySelectionFormatting('heading')" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-emerald-400 border border-zinc-800 rounded font-bold transition flex items-center gap-1">
+                            <span>📌</span>
+                            <span>عنوان فرعي</span>
+                        </button>
+                    </div>
+
+                    <textarea 
+                        id="raw-text" 
+                        oninput="updateFormatting()"
+                        placeholder="ضع النص هنا كالمعتاد.. يتكيف المنظم تلقائياً مع العناوين والوقائع والمصطلحات والتوقيعات..." 
+                        class="w-full h-52 lg:h-56 p-3 bg-zinc-950 border border-zinc-800 rounded-b-xl text-slate-200 text-xs md:text-sm leading-relaxed focus:outline-none focus:border-emerald-500 transition font-mono resize-y"
+                    ></textarea>
+                </div>
+
+                <!-- اسم الملف عند التنزيل -->
+                <div>
+                    <label for="export-filename" class="block text-xs font-bold text-slate-400 mb-1">💾 اسم الملف عند التصدير (.doc):</label>
+                    <input 
+                        type="text" 
+                        id="export-filename" 
+                        value="مستند_صِياغَة_مُنظم"
+                        class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition"
+                    >
+                </div>
+
+                <!-- إعدادات التنسيق -->
+                <div class="bg-zinc-950/80 p-3.5 rounded-xl border border-zinc-800 space-y-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 border-b border-zinc-800 pb-1.5 flex items-center gap-1.5">
+                        <span>🎛️</span>
+                        <span>إعدادات التنسيق وحواف المستند</span>
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">🔤 نوع الخط:</label>
+                            <select id="font-family" onchange="updateFormatting()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="font-amiri" selected>أميري (Amiri - كلاسيكي)</option>
+                                <option value="font-tajawal">تجول (Tajawal - حديث)</option>
+                                <option value="font-cairo">كايرو (Cairo - عريض)</option>
+                                <option value="font-traditional">Traditional Arabic</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">📏 حجم الخط الأساسي:</label>
+                            <select id="font-size" onchange="updateFormatting()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="11pt">11pt - صغير</option>
+                                <option value="12pt">12pt - مدمج</option>
+                                <option value="13pt">13pt - متوسط</option>
+                                <option value="14pt" selected>14pt - القياسي الرسمي</option>
+                                <option value="16pt">16pt - كبير</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">📐 هوامش الصفحة:</label>
+                            <select id="page-margins" onchange="updateFormatting()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="15mm 12mm">ضيقة (1.5 سم)</option>
+                                <option value="20mm 18mm" selected>قياسية (2.0 سم)</option>
+                                <option value="28mm 22mm">واسعة (2.8 سم)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">↕️ تباعد الأسطر:</label>
+                            <select id="line-height" onchange="updateFormatting()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="1.2">مضغوط (1.2)</option>
+                                <option value="1.4" selected>متوسط (1.4)</option>
+                                <option value="1.6">مزدوج (1.6)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5 pt-2 border-t border-zinc-900">
+                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-slate-300 cursor-pointer hover:text-white">
+                            <input type="checkbox" id="center-main-title" onchange="updateFormatting()" checked class="rounded border-zinc-700 text-emerald-500 focus:ring-0 bg-zinc-900">
+                            <span>توسيط العنوان الرئيسي تلقائياً</span>
+                        </label>
+                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-slate-300 cursor-pointer hover:text-white">
+                            <input type="checkbox" id="bold-terms" onchange="updateFormatting()" checked class="rounded border-zinc-700 text-emerald-500 focus:ring-0 bg-zinc-900">
+                            <span>تظليل المصطلحات والتعاريف (`المصطلح: التعريف`)</span>
+                        </label>
+                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-slate-300 cursor-pointer hover:text-white">
+                            <input type="checkbox" id="underline-headings" onchange="updateFormatting()" checked class="rounded border-zinc-700 text-emerald-500 focus:ring-0 bg-zinc-900">
+                            <span>سطر أسفل العناوين الفرعية</span>
+                        </label>
+                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-slate-300 cursor-pointer hover:text-white">
+                            <input type="checkbox" id="first-line-indent" onchange="updateFormatting()" checked class="rounded border-zinc-700 text-emerald-500 focus:ring-0 bg-zinc-900">
+                            <span>مسافة بادئة لسطر الفقرة الأول (Indent)</span>
+                        </label>
+                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-slate-300 cursor-pointer hover:text-white">
+                            <input type="checkbox" id="auto-date" onchange="updateFormatting()" checked class="rounded border-zinc-700 text-emerald-500 focus:ring-0 bg-zinc-900">
+                            <span>إدراج تاريخ اليوم تلقائياً بأسفل المستند</span>
+                        </label>
+                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-slate-300 cursor-pointer hover:text-white">
+                            <input type="checkbox" id="page-border" onchange="updateFormatting()" class="rounded border-zinc-700 text-emerald-500 focus:ring-0 bg-zinc-900">
+                            <span>إضافة إطار صفحة كلاسيكي رسمياً</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs text-slate-400 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
+                    <span id="stat-words" class="font-mono">الكلمات: 0</span>
+                    <span id="stat-paragraphs" class="font-mono">العناصر والفقرات: 0</span>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- لوحة المعاينة الحية A4 -->
+        <section id="preview-panel" class="flex-1 bg-zinc-950/40 p-3 md:p-6 overflow-y-auto custom-scroll flex justify-center items-start min-h-[500px]">
+            <div class="a4-wrapper w-full flex justify-center relative">
+                <div id="print-area" class="a4-page font-amiri transition-all relative">
+                    <div id="page-breaks-container" class="absolute inset-0 pointer-events-none"></div>
+                    <div id="formatted-content" class="w-full relative z-10"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- شريط الحقوق السفلي -->
+    <footer class="no-print bg-zinc-900 border-t border-zinc-800 px-4 py-3 text-center text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p class="font-medium">جميع الحقوق محفوظة © صِياغَة 2026</p>
+            <p class="text-slate-300 bg-zinc-950 px-3 py-1 rounded-full border border-zinc-800">
+                تطوير: <strong class="text-emerald-400 font-bold">عمرو أحمد ربيع</strong> | للتواصل: <span class="font-mono text-white dir-ltr">01553845026</span>
+            </p>
+        </div>
+    </footer>
+
+    <!-- نافذة تأكيد مسح النص -->
+    <div id="confirm-modal" class="no-print fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full space-y-4 text-center shadow-2xl">
+            <div class="w-12 h-12 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mx-auto text-xl">
+                ⚠️
+            </div>
+            <h3 class="font-bold text-base text-white">تأكيد مسح النص</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">هل أنت تأكد من مسح جميع المحتويات المكتوبة في المحرر؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <div class="flex items-center space-x-2 space-x-reverse justify-center pt-2">
+                <button onclick="confirmClearText()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition">نعم، امسح الكل</button>
+                <button onclick="closeClearModal()" class="bg-zinc-800 hover:bg-zinc-700 text-slate-300 text-xs px-4 py-2.5 rounded-xl font-bold transition">إلغاء</button>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-    const templates = {
-        complaint: `مذكرة شكوى إدارية وأكاديمية\n\nالمرفوع إلى: أ.د. عميد الكلية المحترم\nمقدمة من الطالب: أحمد محمود (السنة الثالثة)\nضد الطالب: كريم خالد (السنة الثالثة)\n\nموضوع الشكوى:\nالتعدي على حقوق المشروع الجماعي وتكرار الإساءة السلوكية.\n\nأولاً: الوقائع\n1. بتاريخ 20 أكتوبر 2026، قام المشكو في حقه بالاستيلاء على الجزء البرمجي الخاص بي ونسبه لنفسه.\n2. عند محاولة النقاش معه هادئاً، قام بالتلفظ بعبارات غير لائقة أمام زملائنا بالدفعة.\n\nثانياً: الأسباب والمطالب\n- بناءً على لائحة الانضباط الطلابي بالجامعة المادة 12 الخاصة بانتهاك الأمانة الأكاديمية.\n\nثالثاً: الطلبات\nنلتمس من سيادتكم التكرم بـ:\n- إحالة الشكوى إلى لجنة الانضباط الطلابي.\n- التحقق من ملفات المشروع وإعادة التقييم الأكاديمي المستحق.\n\nتقبلوا بقبول فائق الاحترام والتقدير\nمقدمه الطالب: أحمد محمود`,
-        defense: `مذكرة دفاع في الدعوى رقم 102 لسنة 2026\n\nالمرفوع إلى: عدالة المحكمة الموقرة\nمقدمة من: وكيل المدعى عليه\n\nأولاً: الدفع بعدم قبول الدعوى\nتأسساً على نص المادة 18 من قانون الإجراءات، حيث لم يقم المدعي بتقديم السند القانوني الضامن لطلبه.\n\nثانياً: عن الموضوع\nإن الوقائع الواردة بصحيفة الدعوى جاءت مرسلة ولا تسانده أي قرينة قانونية صحيحة.\n\nثالثاً: الطلبات\nنلتمس من المحكمة الموقرة:\n- رفض الدعوى وإلزام المدعي المصاريف.\n\nوكيل المدعى عليه: المحامي`,
-        terms: `قائمة المصطلحات والتعاريف الأكاديمية\n\nالتحكيم التجاري: وسيلة بديلة لفض المنازعات بين الأطراف بواسطة محكمين يتم اختيارهم للفصل في النزاع.\nالعقد الأدبي: الاتفاق الذي يرتب التزامات اخلاقية دون اللجوء للقضاء.\nالقوة القاهرة: حدث استثنائي عام لا يمكن التنبؤ به يجعل تنفيذ الالتزام مستحيلاً.\n\nإعداد الطالب: أحمد محمود`,
-        minutes: `محضر اجتماع لجنة التنسيق الأكاديمي\n\nالموضوع: تنظيم سير المحاضرات وحل مشكلات المنصة\n\nأولاً: الحضور\n- ممثل الدفعة وأعضاء اللجنة الموقرين.\n\nثانياً: القرارات والتوصيات\n1. اعتماد جدول المحاضرات الجديد اعتباراً من الأسبوع القادم.\n2. حل المشكلات التقنية المتعلقة بالوصول للمواد الدراسية.\n\nرئيس الجلسة: أدمن الدفعة`
-    };
+    <!-- الإشعار المنبثق Toast -->
+    <div id="toast" class="no-print fixed bottom-14 left-5 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl font-bold text-xs md:text-sm flex items-center space-x-2 space-x-reverse transition-all duration-300 opacity-0 translate-y-2 pointer-events-none z-50">
+        <span id="toast-icon">✨</span>
+        <span id="toast-message">تم الإجراء بنجاح</span>
+    </div>
 
-    function loadTemplate(key) {
-        document.getElementById('inputText').value = templates[key];
-        updatePreview();
-    }
-
-    function analyzeLine(line) {
-        const text = line.trim();
-        if (!text) return { type: 'EMPTY' };
-
-        const titles = ['مذكرة', 'صحيفة', 'عقد', 'شكوى', 'محضر', 'قائمة', 'تقرير', 'بيان'];
-        const headings = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 'خامساً', 'الوقائع', 'الأسباب', 'الطلبات', 'الموضوع', 'الحضور', 'القرارات'];
-        const closings = ['مقدمه', 'وكيل', 'المحامي', 'رئيس الجلسة', 'تقبلوا', 'والله ولي التوفيق'];
-
-        if (titles.some(t => text.startsWith(t)) && text.length < 50) return { type: 'TITLE', text };
-        if (headings.some(h => text.startsWith(h)) || text.endsWith(':')) return { type: 'HEADING', text };
-        if (closings.some(c => text.startsWith(c))) return { type: 'CLOSING', text };
-        
-        if (text.includes(':') && !text.endsWith(':') && text.indexOf(':') < 35) {
-            const parts = text.split(':');
-            return { type: 'TERM', term: parts[0] + ':', desc: parts.slice(1).join(':') };
+    <!-- السكربت البرمجي المستقر للخدمات والصوت والتصدير -->
+    <script>
+        // 1. نظام الصوت الناعم والمريح للأذن
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) audioCtx = new AudioCtx();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
         }
 
-        return { type: 'PARAGRAPH', text };
-    }
+        function playSound(type) {
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                const masterGain = ctx.createGain();
+                masterGain.gain.setValueAtTime(0.12, now);
+                masterGain.connect(ctx.destination);
 
-    function updatePreview() {
-        const text = document.getElementById('inputText').value;
-        const font = document.getElementById('fontSelect').value;
-        const size = document.getElementById('fontSize').value;
-        const lh = document.getElementById('lineHeight').value;
-        const margin = document.getElementById('marginSelect').value;
-        const header = document.getElementById('headerText').value;
-        const addDate = document.getElementById('addDate').checked;
-
-        const container = document.getElementById('docContent');
-        const paper = document.getElementById('paper');
-
-        paper.style.fontFamily = font;
-        paper.style.padding = margin;
-        container.innerHTML = '';
-
-        // الترويسة
-        if (header.trim()) {
-            const hDiv = document.createElement('div');
-            hDiv.className = 'doc-header-text';
-            hDiv.innerText = header.trim();
-            container.appendChild(hDiv);
+                if (type === 'click') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(120, now + 0.04);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+                    osc.connect(gain);
+                    gain.connect(masterGain);
+                    osc.start(now);
+                    osc.stop(now + 0.04);
+                } else if (type === 'export') {
+                    [329.63, 392.00, 523.25].forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                        gain.gain.setValueAtTime(0.18, now + idx * 0.06);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.28);
+                        osc.connect(gain);
+                        gain.connect(masterGain);
+                        osc.start(now + idx * 0.06);
+                        osc.stop(now + idx * 0.06 + 0.28);
+                    });
+                }
+            } catch(e) {}
         }
 
-        if (!text.trim()) {
-            container.innerHTML += '<p style="text-align:center; color:#888; margin-top:50px;">سيظهر التنسيق المباشر للمستند هنا...</p>';
-            updateStats(0, 0);
-            return;
-        }
+        window.addEventListener('click', function() { getAudioContext(); }, { once: true });
+        window.addEventListener('touchstart', function() { getAudioContext(); }, { once: true });
 
-        const lines = text.split('\n');
-        let wordCount = 0;
-        let pCount = 0;
+        // 2. تطبيق التنسيق على النص المحدد
+        function applySelectionFormatting(type) {
+            playSound('click');
+            const textarea = document.getElementById('raw-text');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
 
-        lines.forEach(line => {
-            const parsed = analyzeLine(line);
-            if (parsed.type === 'EMPTY') return;
-
-            pCount++;
-            wordCount += line.trim().split(/\s+/).length;
-
-            const el = document.createElement('div');
-            el.style.fontSize = size;
-            el.style.lineHeight = lh;
-
-            if (parsed.type === 'TITLE') {
-                el.className = 'doc-title';
-                el.style.fontSize = `calc(${size} + 4pt)`;
-                el.innerText = parsed.text;
-            } else if (parsed.type === 'HEADING') {
-                el.className = 'doc-heading';
-                el.style.fontSize = `calc(${size} + 1pt)`;
-                el.innerText = parsed.text;
-            } else if (parsed.type === 'CLOSING') {
-                el.className = 'doc-closing';
-                el.innerText = parsed.text;
-            } else if (parsed.type === 'TERM') {
-                el.className = 'doc-term';
-                el.innerHTML = `<span class="doc-term-bold">${parsed.term}</span> ${parsed.desc}`;
-            } else {
-                el.className = 'doc-paragraph';
-                el.style.textIndent = '0.8cm';
-                el.innerText = parsed.text;
+            if (!selectedText.trim()) {
+                showToast("⚠️ يرجى تحديد كلمة أو جملة داخل صندوق النص أولاً!");
+                return;
             }
 
-            container.appendChild(el);
-        });
+            let replacement = selectedText;
+            if (type === 'bold') replacement = '<b>' + selectedText + '</b>';
+            else if (type === 'underline') replacement = '<u>' + selectedText + '</u>';
+            else if (type === 'heading') replacement = '\nأولاً: ' + selectedText + ':\n';
 
-        if (addDate) {
-            const dateDiv = document.createElement('div');
-            dateDiv.className = 'doc-date';
-            const today = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-            dateDiv.innerText = 'التاريخ: ' + today;
-            container.appendChild(dateDiv);
+            textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+            textarea.focus();
+            textarea.setSelectionRange(start, start + replacement.length);
+            updateFormatting();
+            showToast("✨ تم تطبيق التنسيق على النص المحدد!");
         }
 
-        updateStats(wordCount, pCount);
-    }
-
-    function updateStats(words, paragraphs) {
-        document.getElementById('statsBar').innerText = `عدد الكلمات: ${words} | الفقرات: ${paragraphs}`;
-    }
-
-    // تصدير Word متوافق 100% مع الموبايل بفرز التنسيقات الضمنية ووسوم المايكروسوفت
-    function exportWord() {
-        const text = document.getElementById('inputText').value;
-        if (!text.trim()) {
-            alert('يرجى إدخال نص أولاً قبل التصدير.');
-            return;
+        // 3. استيراد المستندات المباشر
+        function triggerFileInput() {
+            playSound('click');
+            document.getElementById('file-import-input').click();
         }
 
-        const font = document.getElementById('fontSelect').value.split(',')[0].replace(/'/g, '');
-        const size = document.getElementById('fontSize').value;
-        const lh = document.getElementById('lineHeight').value;
-        const headerText = document.getElementById('headerText').value;
-        const addDate = document.getElementById('addDate').checked;
-        const rawFileName = document.getElementById('fileName').value.trim() || 'مستند_مُنظم';
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const fileName = file.name;
+            const ext = fileName.split('.').pop().toLowerCase();
 
-        let bodyHtml = '';
-
-        if (headerText.trim()) {
-            bodyHtml += `<p style="text-align:center; font-weight:bold; font-size:10pt; border-bottom:1px solid #000; padding-bottom:4px; margin-bottom:15pt; mso-line-height-rule:exactly;">${headerText.trim()}</p>`;
-        }
-
-        const lines = text.split('\n');
-        lines.forEach(line => {
-            const parsed = analyzeLine(line);
-            if (parsed.type === 'EMPTY') return;
-
-            if (parsed.type === 'TITLE') {
-                bodyHtml += `<p style="text-align:center; font-size:16pt; font-weight:bold; margin-top:10pt; margin-bottom:15pt; text-decoration:underline; mso-line-height-rule:exactly;">${parsed.text}</p>`;
-            } else if (parsed.type === 'HEADING') {
-                bodyHtml += `<p style="text-align:right; font-size:13pt; font-weight:bold; margin-top:12pt; margin-bottom:4pt; text-decoration:underline; mso-line-height-rule:exactly;">${parsed.text}</p>`;
-            } else if (parsed.type === 'CLOSING') {
-                bodyHtml += `<p style="text-align:left; font-size:${size}; font-weight:bold; margin-top:20pt; margin-bottom:5pt; mso-line-height-rule:exactly;">${parsed.text}</p>`;
-            } else if (parsed.type === 'TERM') {
-                bodyHtml += `<p style="text-align:justify; font-size:${size}; line-height:${lh}; margin-bottom:5pt; mso-line-height-rule:exactly;"><b style="font-weight:bold;">${parsed.term}</b> ${parsed.desc}</p>`;
-            } else {
-                bodyHtml += `<p style="text-align:justify; font-size:${size}; line-height:${lh}; text-indent:24pt; margin-bottom:5pt; mso-line-height-rule:exactly;">${parsed.text}</p>`;
+            if (ext === 'txt') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    playSound('click');
+                    document.getElementById('raw-text').value = e.target.result;
+                    document.getElementById('export-filename').value = fileName.replace('.txt', '_مُنظم');
+                    updateFormatting();
+                    showToast("📥 تم استيراد الملف النصي بنجاح!");
+                };
+                reader.readAsText(file, 'UTF-8');
+            } else if (ext === 'docx') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (window.mammoth) {
+                        window.mammoth.extractRawText({ arrayBuffer: e.target.result })
+                            .then(function(result) {
+                                playSound('click');
+                                document.getElementById('raw-text').value = result.value;
+                                document.getElementById('export-filename').value = fileName.replace('.docx', '_مُنظم');
+                                updateFormatting();
+                                showToast("📥 تم استيراد ملف Word بنجاح!");
+                            })
+                            .catch(function() { showToast("❌ تعذر قراءة الملف."); });
+                    }
+                };
+                reader.readAsArrayBuffer(file);
             }
-        });
-
-        if (addDate) {
-            const today = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-            bodyHtml += `<p style="text-align:right; font-weight:bold; font-size:10pt; margin-top:15pt;">التاريخ: ${today}</p>`;
+            event.target.value = '';
         }
 
-        const fullDocument = `
-            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40' dir='rtl'>
-            <head>
-                <meta charset='utf-8'>
-                <!--[if gte mso 9]>
-                <xml>
-                <w:WordDocument>
-                    <w:View>Print</w:View>
-                    <w:Zoom>100</w:Zoom>
-                    <w:DoNotOptimizeForTemplate/>
-                </w:WordDocument>
-                </xml>
-                <![endif]-->
-                <style>
-                    @page { size: A4; margin: 2.0cm 1.8cm; }
-                    body { font-family: '${font}', 'Traditional Arabic', Arial, serif; direction: rtl; text-align: right; font-size: ${size}; }
-                    p { margin: 0; padding: 0; }
-                </style>
-            </head>
-            <body dir='rtl' style='direction:rtl; text-align:right;'>
-                ${bodyHtml}
-            </body>
-            </html>
-        `;
+        // 4. تحليل النصوص
+        function parseTextToElements(rawText) {
+            const lines = rawText.split(/\r?\n/);
+            const elements = [];
+            let isFirstNonEmpty = true;
 
-        const blob = new Blob(['\ufeff' + fullDocument], { type: 'application/msword' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${rawFileName}.doc`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) {
+                    elements.push({ type: 'EMPTY' });
+                    continue;
+                }
 
-    function exportPDF() {
-        window.print();
-    }
+                const titleKeywords = /^(مذكرة|صحيفة|عقد|خطاب|تقرير|بيان|طلب|بحث|مشروع|محضر|دليل|عرض|لائحة|إعلان|شكوى|استقالة)/i;
+                if (isFirstNonEmpty && (titleKeywords.test(line) || (line.length < 65 && !line.endsWith('.') && !line.endsWith(':')))) {
+                    elements.push({ type: 'MAIN_TITLE', text: line });
+                    isFirstNonEmpty = false;
+                    continue;
+                }
+                isFirstNonEmpty = false;
 
-    function copyFormattedText() {
-        const text = document.getElementById('inputText').value;
-        if (!text.trim()) return;
-        navigator.clipboard.writeText(text).then(() => {
-            alert('تم نسخ النص الحافظة بنجاح!');
-        });
-    }
+                const closingKeywords = /^(توقيع|مقدمه|مقدم الطلب|مقدم الشكوى|الطالب|وكيل|شاكرين|وتفضلوا|تحريراً في|حرر في|والله ولي التوفيق|المحامي)/i;
+                if (closingKeywords.test(line) || line.includes("والله ولي التوفيق") || line.includes("مع فائق الاحترام")) {
+                    elements.push({ type: 'CLOSING', text: line });
+                    continue;
+                }
 
-    function clearText() {
-        if (document.getElementById('inputText').value.trim() === '') return;
-        if (confirm('هل أنت تأكد من مسح النص الحالي بالكامل؟')) {
-            document.getElementById('inputText').value = '';
-            updatePreview();
+                const termMatch = line.match(/^([^:\n]{2,45}):\s*(.+)$/);
+                const headingWords = /^(أولاً|ثانياً|ثالثاً|رابعاً|خامساً|سادساً|سابعاً|ثامناً|الموضوع|الوقائع|الأسباب|الطلبات|توصيات|الحضور)/i;
+
+                if (termMatch && !headingWords.test(termMatch[1].trim())) {
+                    elements.push({ type: 'TERM_DEF', term: termMatch[1].trim(), def: termMatch[2].trim() });
+                    continue;
+                }
+
+                if (headingWords.test(line) || line.endsWith(':')) {
+                    elements.push({ type: 'HEADING', text: line });
+                    continue;
+                }
+
+                if (/^([-*•◦▪]|(\d+|[أ-ي])[\)-])\s+/.test(line)) {
+                    elements.push({ type: 'LIST_ITEM', text: line });
+                    continue;
+                }
+
+                elements.push({ type: 'PARAGRAPH', text: line });
+            }
+            return elements;
         }
-    }
 
-    // تحميل نموذج عند أول تشغيل
-    loadTemplate('complaint');
-</script>
+        function sanitizeText(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                .replace(/&lt;b&gt;/gi, '<b>').replace(/&lt;\/b&gt;/gi, '</b>')
+                .replace(/&lt;u&gt;/gi, '<u>').replace(/&lt;\/u&gt;/gi, '</u>');
+        }
 
+        // 5. تحديث التنسيق والمعاينة الحية
+        function updateFormatting() {
+            const rawText = document.getElementById('raw-text').value;
+            const customHeader = document.getElementById('custom-header-input').value.trim();
+            const container = document.getElementById('formatted-content');
+            const a4Page = document.getElementById('print-area');
+
+            const fontFamilyClass = document.getElementById('font-family').value;
+            const fontSize = document.getElementById('font-size').value;
+            const lineHeight = document.getElementById('line-height').value;
+            const margins = document.getElementById('page-margins').value;
+            const pageBorder = document.getElementById('page-border').checked;
+
+            a4Page.className = 'a4-page ' + fontFamilyClass + (pageBorder ? ' page-border-classic' : '');
+            a4Page.style.fontSize = fontSize;
+            a4Page.style.lineHeight = lineHeight;
+            a4Page.style.padding = margins;
+
+            const elements = parseTextToElements(rawText);
+            const wordCount = rawText.trim() ? rawText.trim().split(/\s+/).length : 0;
+            const nonEmptyElements = elements.filter(e => e.type !== 'EMPTY').length;
+            document.getElementById('stat-words').innerText = 'الكلمات: ' + wordCount;
+            document.getElementById('stat-paragraphs').innerText = 'العناصر والفقرات: ' + nonEmptyElements;
+
+            if (!rawText.trim() && !customHeader) {
+                container.innerHTML = '<div class="h-96 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center"><p class="font-bold text-sm text-slate-700">المعاينة الحية جاهزة</p><p class="text-xs text-slate-500 mt-1">اكتب أي نص أو استورد مستنداً</p></div>';
+                renderPageBreaks();
+                return;
+            }
+
+            let htmlOutput = '';
+            if (customHeader) {
+                htmlOutput += '<div class="text-center font-bold text-xs md:text-sm border-b border-black pb-2 mb-4 text-black">' + sanitizeText(customHeader) + '</div>';
+            }
+
+            const centerMainTitle = document.getElementById('center-main-title').checked;
+            const underlineHeadings = document.getElementById('underline-headings').checked;
+            const firstLineIndent = document.getElementById('first-line-indent').checked;
+            const boldTerms = document.getElementById('bold-terms').checked;
+
+            elements.forEach(function(item) {
+                if (item.type === 'EMPTY') {
+                    htmlOutput += '<div style="height: 10px;"></div>';
+                } else if (item.type === 'MAIN_TITLE') {
+                    htmlOutput += '<h1 class="' + (centerMainTitle ? 'text-center' : 'text-right') + ' font-bold text-xl md:text-2xl mb-4 pb-1 border-b-2 border-black text-black">' + sanitizeText(item.text) + '</h1>';
+                } else if (item.type === 'HEADING') {
+                    htmlOutput += '<h2 class="font-bold text-base md:text-lg text-black mt-3 mb-1.5" style="' + (underlineHeadings ? 'text-decoration: underline;' : '') + ' page-break-after: avoid;">' + sanitizeText(item.text) + '</h2>';
+                } else if (item.type === 'TERM_DEF') {
+                    htmlOutput += '<div class="mb-2 text-justify text-black"><strong class="' + (boldTerms ? 'font-bold' : '') + '">' + sanitizeText(item.term) + ':</strong> <span>' + sanitizeText(item.def) + '</span></div>';
+                } else if (item.type === 'LIST_ITEM') {
+                    htmlOutput += '<div class="flex items-start space-x-2 space-x-reverse my-1 pr-2 text-black"><span class="font-bold">•</span><span class="flex-1 text-justify">' + sanitizeText(item.text.replace(/^([-*•◦▪]|(\d+|[أ-ي])[\)-])\s+/, '')) + '</span></div>';
+                } else if (item.type === 'CLOSING') {
+                    htmlOutput += '<div class="text-left font-bold text-sm md:text-base mt-5 mb-2 pl-2 text-black" style="page-break-inside: avoid;">' + sanitizeText(item.text) + '</div>';
+                } else {
+                    htmlOutput += '<p class="text-justify leading-relaxed mb-2 text-black" style="' + (firstLineIndent ? 'text-indent: 1cm;' : '') + '">' + sanitizeText(item.text) + '</p>';
+                }
+            });
+
+            if (document.getElementById('auto-date').checked) {
+                const today = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+                htmlOutput += '<div class="text-right text-xs md:text-sm font-semibold mt-6 pt-3 border-t border-black text-black" style="page-break-inside: avoid;">التاريخ: ' + today + '</div>';
+            }
+
+            container.innerHTML = htmlOutput;
+            setTimeout(renderPageBreaks, 100);
+        }
+
+        // 6. رسم فواصل الصفحات الحية
+        function renderPageBreaks() {
+            const container = document.getElementById('page-breaks-container');
+            const page = document.getElementById('print-area');
+            container.innerHTML = '';
+
+            const pageHeightPx = 1122.5;
+            const totalHeight = page.offsetHeight;
+
+            if (totalHeight > pageHeightPx) {
+                const pageCount = Math.floor(totalHeight / pageHeightPx);
+                for (let i = 1; i <= pageCount; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'page-break-line';
+                    line.style.top = (i * pageHeightPx) + 'px';
+                    line.innerHTML = '<span class="page-break-badge">نهاية الصفحة ' + i + ' / بداية الصفحة ' + (i+1) + '</span>';
+                    container.appendChild(line);
+                }
+            }
+        }
+
+        // 7. التصدير المباشر بتنسيق MHTML المتوافق مع الهواتف والحواسب
+        function exportToWord() {
+            playSound('export');
+            const rawText = document.getElementById('raw-text').value;
+            const customHeader = document.getElementById('custom-header-input').value;
+            if (!rawText.trim() && !customHeader.trim()) {
+                showToast("⚠️ يرجى كتابة نص قبل التصدير!");
+                return;
+            }
+
+            let fileName = document.getElementById('export-filename').value.trim() || 'مستند_صِياغَة_مُنظم';
+            if (!fileName.endsWith('.doc')) fileName += '.doc';
+
+            const fontSelect = document.getElementById('font-family');
+            const fontName = fontSelect.options[fontSelect.selectedIndex].text.split(' ')[0];
+            const size = document.getElementById('font-size').value;
+            const lineHeight = document.getElementById('line-height').value;
+            const contentHTML = document.getElementById('formatted-content').innerHTML;
+
+            const mhtmlLines = [
+                'MIME-Version: 1.0',
+                'Content-Type: multipart/related; boundary="----=_NextPart_WordApp"',
+                '',
+                '------=_NextPart_WordApp',
+                'Content-Location: file:///C:/document.htm',
+                'Content-Type: text/html; charset="utf-8"',
+                '',
+                '<!DOCTYPE html>',
+                '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40" dir="rtl">',
+                '<head>',
+                '<meta charset="utf-8">',
+                '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->',
+                '<style>',
+                '@page { size: A4 portrait; margin: 2.0cm 1.8cm; }',
+                'body { font-family: "' + fontName + '", "Traditional Arabic", Arial, serif; direction: rtl; text-align: right; color: #000000; line-height: ' + lineHeight + '; font-size: ' + size + '; }',
+                'h1 { text-align: center; font-size: 18pt; font-weight: bold; margin-bottom: 16px; text-decoration: underline; }',
+                'h2 { font-size: 15pt; font-weight: bold; margin-top: 14px; margin-bottom: 6px; text-decoration: underline; }',
+                'p { font-size: ' + size + '; text-align: justify; margin-bottom: 6px; }',
+                'strong { font-weight: bold; }',
+                '</style>',
+                '</head>',
+                '<body dir="rtl">',
+                contentHTML,
+                '</body>',
+                '</html>',
+                '',
+                '------=_NextPart_WordApp--'
+            ];
+
+            const blob = new Blob([mhtmlLines.join('\n')], { type: 'application/msword;charset=utf-8' });
+            const downloadUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
+
+            showToast("📄 تم تصدير ملف Word بنجاح!");
+        }
+
+        function printDocument() {
+            playSound('click');
+            if (!document.getElementById('raw-text').value.trim()) {
+                showToast("⚠️ يرجى كتابة نص أولاً!");
+                return;
+            }
+            window.print();
+        }
+
+        // 8. القوالب السريعة المتوازنة
+        const samples = {
+            student: 'مذكرة شكوى أكاديمية وإدارية\n\nالمرفوع إلى: أ.د. عميد الكلية المحترم\nمقدمة من الطالب: أحمد محمود (السنة الثالثة)\nضــد الطالب: كريم خالد (السنة الثالثة)\n\nموضوع الشكوى:\nالتعدي على حقوق المشروع الجماعي وتكرار الإساءة السلوكية.\n\nأولاً: الوقائع\n1. بتاريخ 20 أكتوبر 2026، قام المشكو في حقه بالاستيلاء على الجزء البرمجي الخاص بي ونسبه لنفسه.\n2. عند محاولة النقاش معه هادئاً، قام بالتلفظ بعبارات غير لائقة أمام زملائنا بالدفعة.\n\nثانياً: الأسباب والمطالب\n- بناءً على لائحة الانضباط الطلابي بالجامعة، المادة 12 الخاصة بانتهاك الأمانة الأكاديمية.\n\nثالثاً: الطلبات\nنلتمس من سيادتكم التكرم بـ:\n- إحالة الشكوى إلى لجنة الانضباط الطلابي.\n- التحقق من ملفات المشروع وإعادة التقييم الأكاديمي المستحق.\n\nوتقبلوا بقبول فائق الاحترام والتقدير\nمقدمه الطالب: أحمد محمود',
+            legal: 'مذكرة دفاع ورأي قانوني\n\nمقدمة من: مكتب الاستشارات القانونية\nبشأن: تفنيد ادعاءات المسؤولية العقدية في الدعوى رقم 892\n\nأولاً: التكييف القانوني للواقعة\nإن النزاع الماثل لا ينطوي على خطأ عقدي، وإنما يندرج تحت نص المادة 215 من القانون المدني المتعلقة بالقوة القاهرة.\n\nثانياً: الأسانيد\n- عدم توافر رابطة السببية بين الفعل والضرر المدعى به.\n\nثالثاً: النتيجة والطلب\nإلغاء المطالبة بالتعويض وإلزام المدعي بالمصروفات.\n\nوالله ولي التوفيق\nمستشار القانون: محمد العتيبي',
+            terms: 'دليل المصطلحات والتعريفات التقنية والأكاديمية\n\nالذكاء الاصطناعي: قدرة الأنظمة الحاسوبية على محاكاة القدرات الذهنية البشرية وأنماط التعلم الذاتي.\nواجهة برمجة التطبيقات: جسر برمجي يتيح للتطبيقات المختلفة التواصل وتبادل البيانات بنظام وآمان.\nمعالجة اللغات الطبيعية: فرع تقني يُمكّن الحاسوب من فهم واستخلاص المعاني من النصوص البشرية.\n\nحرر بواسطة: وحدة تطوير البحوث',
+            meeting: 'محضر اجتماع لجنة إدارة المشروعات\n\nالحضور:\n- رئيس الجلسة: د. خالد عبد الرحمن\n- أمين السر: م. سارة أحمد\n\nجدول الأعمال:\n1. استعراض نسبة الإنجاز والتوصيات.\n\nالتوصيات والقرارات:\n- التوصية الأولى: تمديد الموعد النهائي لتسليم المرحلة الثانية.\n\nتوقيع أمين السر: م. سارة أحمد',
+            official_letter: 'خطاب طلب اعتماد برنامج تدريبي\n\nإلى السيد: مدير عام الإدارة الموقر\nتحية طيبة وبعد،،،\n\nالموضوع: طلب موافقة على تنظيم الدورة التدريبية.\n\nبالإشارة إلى الموضوع أعلاه، نود إحاطة سيادتكم علماً برغبة قسم التطوير في إقامة ورشة عمل متخصصة.\n\nوتفضلوا بقبول فائق الاحترام والتقدير\nمقدمه لسيادتكم: رئيس قسم التطوير'
+        };
+
+        function loadSample(type) {
+            playSound('click');
+            document.getElementById('raw-text').value = samples[type];
+            updateFormatting();
+            showToast("تم تحميل النموذج التجريبي ✨");
+        }
+
+        function promptClearText() {
+            playSound('click');
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+
+        function closeClearModal() {
+            playSound('click');
+            document.getElementById('confirm-modal').classList.add('hidden');
+        }
+
+        function confirmClearText() {
+            playSound('click');
+            document.getElementById('raw-text').value = '';
+            document.getElementById('custom-header-input').value = '';
+            closeClearModal();
+            updateFormatting();
+            showToast("تم مسح المحتوى بالكامل");
+        }
+
+        function copyFormattedText() {
+            playSound('click');
+            const rawText = document.getElementById('raw-text').value;
+            if (!rawText.trim()) { showToast("⚠️ لا يوجد نص لنسخه!"); return; }
+            navigator.clipboard.writeText(rawText).then(function() {
+                showToast("📋 تم نسخ النص للحافظة بنجاح!");
+            });
+        }
+
+        function switchMobileTab(tab) {
+            playSound('click');
+            const editorPanel = document.getElementById('editor-panel');
+            const previewPanel = document.getElementById('preview-panel');
+            const editorBtn = document.getElementById('tab-editor-btn');
+            const previewBtn = document.getElementById('tab-preview-btn');
+
+            if (tab === 'editor') {
+                editorPanel.classList.remove('hidden');
+                previewPanel.classList.add('hidden');
+                editorBtn.className = 'flex-1 py-2 text-center text-xs font-bold rounded-lg bg-zinc-800 text-emerald-400 shadow';
+                previewBtn.className = 'flex-1 py-2 text-center text-xs font-bold rounded-lg text-slate-400';
+            } else {
+                editorPanel.classList.add('hidden');
+                previewPanel.classList.remove('hidden');
+                previewPanel.classList.add('flex');
+                previewBtn.className = 'flex-1 py-2 text-center text-xs font-bold rounded-lg bg-zinc-800 text-emerald-400 shadow';
+                editorBtn.className = 'flex-1 py-2 text-center text-xs font-bold rounded-lg text-slate-400';
+                setTimeout(renderPageBreaks, 100);
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = message;
+            toast.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+            setTimeout(function() {
+                toast.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+            }, 2500);
+        }
+
+        window.onload = function() {
+            loadSample('student');
+            window.addEventListener('resize', renderPageBreaks);
+        };
+    </script>
 </body>
 </html>
