@@ -115,7 +115,7 @@
             font-weight: bold;
         }
 
-        /* إصلاح الطباعة الشامل لضمان إظهار المستند كاملاً وعدم ظهور صفحات بيضاء */
+        /* إصلاح الطباعة الشامل والتخلص من الصفحات البيضاء الفارغة */
         @media print {
             body { 
                 background: #ffffff !important; 
@@ -148,7 +148,9 @@
                 box-shadow: none !important;
                 border: none !important;
                 min-height: 0 !important;
+                height: auto !important;
                 width: 100% !important;
+                padding: 0 !important; /* تصفير الهوامش الداخلية في الطباعة لمنع التضاعف مع هوامش الصفحة */
             }
 
             p, div, h1, h2, h3 {
@@ -165,7 +167,7 @@
             }
             @page { 
                 size: A4 portrait; 
-                margin: 15mm 15mm 15mm 15mm; 
+                margin: 18mm 15mm 18mm 15mm; 
             }
         }
 
@@ -612,11 +614,12 @@
             event.target.value = '';
         }
 
-        // 4. تحليل النصوص فائق الأداء (يدعم 20,000+ كلمة)
+        // 4. تحليل النصوص فائق الأداء ومنع تكرار الأسطر الفارغة
         function parseTextToElements(rawText) {
             const lines = rawText.split(/\r?\n/);
             const elements = [];
             let isFirstNonEmpty = true;
+            let consecutiveEmptyCount = 0;
 
             const titleKeywords = /^(مذكرة|صحيفة|عقد|خطاب|تقرير|بيان|طلب|بحث|مشروع|محضر|دليل|عرض|لائحة|إعلان|شكوى|استقالة|أحكام|حكم|قرار|دعوى)/i;
             const closingKeywords = /^(توقيع|مقدمه|مقدم الطلب|مقدم الشكوى|الطالب|وكيل|شاكرين|وتفضلوا|تحريراً في|حرر في|والله ولي التوفيق|المحامي)/i;
@@ -624,10 +627,17 @@
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
+                
+                // دمج الأسطر الفارغة المتكررة لمنع خلق صفحات بيضاء في الطباعة
                 if (!line) {
-                    elements.push({ type: 'EMPTY' });
+                    consecutiveEmptyCount++;
+                    if (consecutiveEmptyCount <= 1) {
+                        elements.push({ type: 'EMPTY' });
+                    }
                     continue;
                 }
+
+                consecutiveEmptyCount = 0;
 
                 if (isFirstNonEmpty && (titleKeywords.test(line) || (line.length < 65 && !line.endsWith('.') && !line.endsWith(':')))) {
                     elements.push({ type: 'MAIN_TITLE', text: line });
@@ -668,7 +678,6 @@
                 .replace(/&lt;u&gt;/gi, '<u>').replace(/&lt;\/u&gt;/gi, '</u>');
         }
 
-        // Debounced formatting for large documents (20,000+ words)
         let updateTimeout = null;
         function debouncedUpdateFormatting() {
             if (updateTimeout) clearTimeout(updateTimeout);
@@ -717,7 +726,7 @@
 
             elements.forEach(function(item) {
                 if (item.type === 'EMPTY') {
-                    htmlOutput += '<div style="height: 10px;"></div>';
+                    htmlOutput += '<div style="height: 6px;"></div>';
                 } else if (item.type === 'MAIN_TITLE') {
                     htmlOutput += '<h1 class="' + (centerMainTitle ? 'text-center' : 'text-right') + ' font-bold text-xl md:text-2xl mb-4 pb-1 border-b-2 border-black text-black">' + sanitizeText(item.text) + '</h1>';
                 } else if (item.type === 'HEADING') {
@@ -742,7 +751,7 @@
             setTimeout(renderPageBreaks, 100);
         }
 
-        // 6. رسم فواصل الصفحات الحية (محدد للوثائق العادية لمنع تباطؤ الشاشة)
+        // 6. رسم فواصل الصفحات الحية
         function renderPageBreaks() {
             const container = document.getElementById('page-breaks-container');
             const page = document.getElementById('print-area');
@@ -752,7 +761,7 @@
             const totalHeight = page.offsetHeight;
 
             if (totalHeight > pageHeightPx) {
-                const pageCount = Math.min(Math.floor(totalHeight / pageHeightPx), 35); // حد أمان لأداء الموبايل
+                const pageCount = Math.min(Math.floor(totalHeight / pageHeightPx), 35);
                 for (let i = 1; i <= pageCount; i++) {
                     const line = document.createElement('div');
                     line.className = 'page-break-line';
@@ -763,7 +772,7 @@
             }
         }
 
-        // 7. التصدير المباشر بتنسيق MHTML المتوافق مع الهواتف والحواسب
+        // 7. التصدير المباشر بتنسيق MHTML
         function exportToWord() {
             playSound('export');
             const rawText = document.getElementById('raw-text').value;
@@ -831,7 +840,6 @@
                 showToast("⚠️ يرجى كتابة نص أولاً!");
                 return;
             }
-            // إظهار المعاينة مباشرة إذا كان المستند مفتوحاً في وضع الهاتف قبل الطباعة
             const previewPanel = document.getElementById('preview-panel');
             previewPanel.classList.remove('hidden');
             previewPanel.classList.add('flex');
@@ -841,7 +849,7 @@
             }, 100);
         }
 
-        // 8. القوالب السريعة المتوازنة
+        // 8. القوالب السريعة
         const samples = {
             student: 'مذكرة شكوى أكاديمية وإدارية\n\nالمرفوع إلى: أ.د. عميد الكلية المحترم\nمقدمة من الطالب: أحمد محمود (السنة الثالثة)\nضــد الطالب: كريم خالد (السنة الثالثة)\n\nموضوع الشكوى:\nالتعدي على حقوق المشروع الجماعي وتكرار الإساءة السلوكية.\n\nأولاً: الوقائع\n1. بتاريخ 20 أكتوبر 2026، قام المشكو في حقه بالاستيلاء على الجزء البرمجي الخاص بي ونسبه لنفسه.\n2. عند محاولة النقاش معه هادئاً، قام بالتلفظ بعبارات غير لائقة أمام زملائنا بالدفعة.\n\nثانياً: الأسباب والمطالب\n- بناءً على لائحة الانضباط الطلابي بالجامعة، المادة 12 الخاصة بانتهاك الأمانة الأكاديمية.\n\nثالثاً: الطلبات\nنلتمس من سيادتكم التكرم بـ:\n- إحالة الشكوى إلى لجنة الانضباط الطلابي.\n- التحقق من ملفات المشروع وإعادة التقييم الأكاديمي المستحق.\n\nوتقبلوا بقبول فائق الاحترام والتقدير\nمقدمه الطالب: أحمد محمود',
             legal: 'مذكرة دفاع ورأي قانوني\n\nمقدمة من: مكتب الاستشارات القانونية\nبشأن: تفنيد ادعاءات المسؤولية العقدية في الدعوى رقم 892\n\nأولاً: التكييف القانوني للواقعة\nإن النزاع الماثل لا ينطوي على خطأ عقدي، وإنما يندرج تحت نص المادة 215 من القانون المدني المتعلقة بالقوة القاهرة.\n\nثانياً: الأسانيد\n- عدم توافر رابطة السببية بين الفعل والضرر المدعى به.\n\nثالثاً: النتيجة والطلب\nإلغاء المطالبة بالتعويض وإلزام المدعي بالمصروفات.\n\nوالله ولي التوفيق\nمستشار القانون: محمد العتيبي',
