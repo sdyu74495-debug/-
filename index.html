@@ -1,747 +1,234 @@
-```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المحرر الذكي للمستندات - Smart Universal Document Formatter</title>
-    
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts: Amiri, Cairo, Tajawal -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- docx.js & FileSaver.js for Word Export -->
-    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-
+    <title>المحرر الذكي للمستندات</title>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* أنماط الخطوط الأكاديمية والكلاسيكية */
-        .font-amiri { font-family: 'Amiri', 'Traditional Arabic', serif; }
-        .font-cairo { font-family: 'Cairo', sans-serif; }
-        .font-tajawal { font-family: 'Tajawal', sans-serif; }
-        .font-traditional { font-family: 'Traditional Arabic', 'Amiri', serif; }
-        .font-arial { font-family: Arial, Helvetica, sans-serif; }
-        .font-times { font-family: 'Times New Roman', Times, serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Cairo', sans-serif; background-color: #f8f9fa; color: #000; direction: rtl; }
 
-        /* محاكاة ورقة A4 حقيقية للمعاينة بالأبيض والأسود */
-        .a4-page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 25mm;
-            margin: 0 auto;
-            background: #ffffff;
-            color: #000000;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
-            box-sizing: border-box;
-            position: relative;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
+        .app-container { display: flex; flex-direction: column; min-height: 100vh; padding: 15px; max-width: 1300px; margin: 0 auto; gap: 15px; }
+        
+        header { background: #111; color: #fff; padding: 15px; border-radius: 8px; text-align: center; }
+        header h1 { font-size: 1.3rem; margin-bottom: 4px; }
+        header p { font-size: 0.85rem; color: #aaa; }
+
+        .main-content { display: flex; flex-direction: column; gap: 15px; }
+        @media (min-width: 992px) {
+            .main-content { display: grid; grid-template-columns: 420px 1fr; align-items: start; }
         }
 
-        /* تخصيص الطباعة وتوليد PDF */
+        .panel { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; }
+        .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+
+        .templates-container { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+        .btn-template { background: #f0f0f0; color: #000; border: 1px solid #ccc; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-family: inherit; font-weight: 600; }
+        .btn-template:hover { background: #000; color: #fff; }
+
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+        select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.9rem; }
+        textarea { height: 220px; resize: vertical; line-height: 1.5; }
+
+        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .btn { padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: 700; font-size: 0.9rem; font-family: inherit; text-align: center; }
+        .btn-word { background: #000; color: #fff; }
+        .btn-word:hover { background: #333; }
+        .btn-pdf { background: #333; color: #fff; }
+        .btn-pdf:hover { background: #555; }
+
+        /* معاينة المستند */
+        .preview-wrapper { background: #666; padding: 10px; border-radius: 8px; overflow-x: auto; display: flex; justify-content: center; }
+        .paper { background: #fff; color: #000; width: 100%; max-width: 210mm; min-height: 297mm; padding: 20mm 18mm; border: 1px solid #999; box-sizing: border-box; }
+
+        /* عناصر النص داخل الورقة */
+        .doc-title { text-align: center; font-size: 17pt; font-weight: bold; margin-bottom: 18px; border-bottom: 2px solid #000; padding-bottom: 6px; }
+        .doc-heading { font-size: 13.5pt; font-weight: bold; margin-top: 14px; margin-bottom: 6px; text-decoration: underline; page-break-after: avoid; }
+        .doc-paragraph { font-size: 12pt; line-height: 1.6; text-align: justify; text-justify: inter-word; text-indent: 0.8cm; margin-bottom: 6px; }
+        .doc-term { font-size: 12pt; line-height: 1.5; margin-bottom: 6px; text-align: justify; }
+        .doc-term-bold { font-weight: bold; }
+        .doc-closing { text-align: left; font-weight: bold; font-size: 12.5pt; margin-top: 22px; page-break-inside: avoid; }
+
+        /* إعدادات الطباعة ومنع ظهور صفحات إضافية */
         @media print {
-            body * {
-                visibility: hidden;
-            }
-            .no-print {
-                display: none !important;
-            }
-            #print-area, #print-area * {
-                visibility: visible;
-            }
-            #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 20mm !important;
-                box-shadow: none !important;
-                border: none !important;
-            }
-            @page {
-                size: A4 portrait;
-                margin: 0;
-            }
-        }
-
-        /* إطار صفحة كلاسيكي اسود وبسيط */
-        .page-border-classic {
-            border: 2px solid #000000;
-            outline: 1px solid #000000;
-            outline-offset: -6px;
-        }
-
-        /* شريط التمرير مخصص لصفحة المعاينة */
-        .preview-container::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        .preview-container::-webkit-scrollbar-thumb {
-            background: #4b5563;
-            border-radius: 4px;
-        }
-        .preview-container::-webkit-scrollbar-track {
-            background: #1f2937;
+            body { background: #fff; }
+            .app-container, .main-content { display: block; padding: 0; margin: 0; }
+            header, .panel { display: none !important; }
+            .preview-wrapper { background: #fff; padding: 0; border-radius: 0; }
+            .paper { border: none; width: 100%; max-width: none; min-height: auto; padding: 0; margin: 0; box-shadow: none; }
+            @page { size: A4; margin: 2cm 1.5cm; }
         }
     </style>
 </head>
-<body class="bg-zinc-900 text-zinc-100 font-tajawal min-h-screen flex flex-col">
+<body>
 
-    <!-- شريط العنوان العلوي (Header) -->
-    <header class="no-print bg-zinc-950 border-b border-zinc-800 px-4 py-3 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center space-x-3 space-x-reverse">
-                <div class="w-10 h-10 bg-zinc-100 text-zinc-950 flex items-center justify-center font-bold text-xl rounded shadow">
-                    📝
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg text-white leading-none">المُحرِّر الذكي للمستندات</h1>
-                    <p class="text-xs text-zinc-400 mt-1">تنسيق وتأقلم تلقائي ممتد لكافة أنواع النصوص والوثائق (أبيض وأسود)</p>
-                </div>
-            </div>
-
-            <!-- أزرار التصدير والطباعة -->
-            <div class="flex items-center space-x-2 space-x-reverse">
-                <button onclick="printDocument()" class="flex items-center space-x-2 space-x-reverse bg-zinc-100 hover:bg-white text-zinc-950 px-3.5 py-2 rounded font-semibold text-sm transition shadow">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                    <span>تصدير / طباعة PDF</span>
-                </button>
-                <button onclick="exportToWord()" class="flex items-center space-x-2 space-x-reverse bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 px-3.5 py-2 rounded font-semibold text-sm transition shadow">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    <span>تصدير Word (.docx)</span>
-                </button>
-            </div>
-        </div>
+<div class="app-container">
+    <header>
+        <h1>⚖️ المنظم والمحرر الذكي للمستندات</h1>
+        <p>تنسيق فوري للمذكرات والشكاوى والمصطلحات بأعلى معايير الطباعة أحادية اللون</p>
     </header>
 
-    <!-- بيئة العمل الرئيسية -->
-    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden max-w-[1800px] w-full mx-auto">
-        
-        <!-- اللوحة الجانبية: المدخلات والإعدادات (الجانب الأيمن) -->
-        <aside class="no-print w-full lg:w-[480px] xl:w-[520px] bg-zinc-900 border-b lg:border-b-0 lg:border-l border-zinc-800 flex flex-col h-auto lg:h-[calc(100vh-65px)]">
-            
-            <!-- أزرار تبويب العرض للموبايل -->
-            <div class="flex lg:hidden bg-zinc-950 border-b border-zinc-800 p-1">
-                <button id="tab-editor-btn" onclick="switchMobileTab('editor')" class="flex-1 py-2 text-center text-sm font-semibold rounded bg-zinc-800 text-white">المحرر والخيارات</button>
-                <button id="tab-preview-btn" onclick="switchMobileTab('preview')" class="flex-1 py-2 text-center text-sm font-semibold rounded text-zinc-400">المعاينة الحية (A4)</button>
+    <div class="main-content">
+        <!-- لوحة التحكم -->
+        <div class="panel">
+            <div class="section-title">⚡ نماذج تجريبية سريعة</div>
+            <div class="templates-container">
+                <button class="btn-template" onclick="loadTemplate('complaint')">📝 شكوى ضد زميل</button>
+                <button class="btn-template" onclick="loadTemplate('defense')">⚖️ مذكرة دفاع</button>
+                <button class="btn-template" onclick="loadTemplate('terms')">📚 مصطلحات وتعاريف</button>
+                <button class="btn-template" onclick="loadTemplate('minutes')">📑 محضر اجتماع</button>
             </div>
 
-            <!-- محتوى الإعدادات والمحرر -->
-            <div id="editor-panel" class="flex-1 overflow-y-auto p-4 space-y-5">
-                
-                <!-- النماذج السريعة الجاهزة -->
-                <div>
-                    <label class="block text-xs font-bold text-zinc-400 mb-2">⚡ استدعاء نموذج سريع لتجربة التأقلم الذكي:</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="loadSample('student')" class="bg-zinc-800 hover:bg-zinc-700 text-xs py-2 px-2.5 rounded border border-zinc-700 transition text-right text-zinc-200 flex items-center justify-between">
-                            <span>🎓 مذكرة طالب ضد زميل</span>
-                            <span class="text-zinc-500 text-[10px]">شكوى</span>
-                        </button>
-                        <button onclick="loadSample('terms')" class="bg-zinc-800 hover:bg-zinc-700 text-xs py-2 px-2.5 rounded border border-zinc-700 transition text-right text-zinc-200 flex items-center justify-between">
-                            <span>📚 قائمة مصطلحات وتعاريف</span>
-                            <span class="text-zinc-500 text-[10px]">أكاديمي</span>
-                        </button>
-                        <button onclick="loadSample('legal')" class="bg-zinc-800 hover:bg-zinc-700 text-xs py-2 px-2.5 rounded border border-zinc-700 transition text-right text-zinc-200 flex items-center justify-between">
-                            <span>⚖️ مذكرة تفنيد ودفاع</span>
-                            <span class="text-zinc-500 text-[10px]">قانوني</span>
-                        </button>
-                        <button onclick="loadSample('meeting')" class="bg-zinc-800 hover:bg-zinc-700 text-xs py-2 px-2.5 rounded border border-zinc-700 transition text-right text-zinc-200 flex items-center justify-between">
-                            <span>📋 محضر اجتماع وتوصيات</span>
-                            <span class="text-zinc-500 text-[10px]">إداري</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- صندوق إدخال النص الخام -->
-                <div class="flex flex-col">
-                    <div class="flex items-center justify-between mb-2">
-                        <label for="raw-text" class="text-sm font-bold text-zinc-200 flex items-center gap-2">
-                            <span>النص الخام (ضع أي نص هنا):</span>
-                        </label>
-                        <button onclick="clearText()" class="text-xs text-zinc-400 hover:text-red-400 transition">مسح النص</button>
-                    </div>
-                    <textarea 
-                        id="raw-text" 
-                        oninput="updateFormatting()"
-                        placeholder="ضع النص هنا كالمعتاد.. سيتكيف المحرر الذكي تلقائياً مع المصطلحات، العناوين، الفقرات، والختام دون أي تعقيد..." 
-                        class="w-full h-64 lg:h-72 p-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 text-sm leading-relaxed focus:outline-none focus:border-zinc-500 transition font-mono resize-y"
-                    ></textarea>
-                </div>
-
-                <!-- أدوات التنسيق والتحكم -->
-                <div class="bg-zinc-950 p-4 rounded-lg border border-zinc-800 space-y-4">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-800 pb-2">خيارات التنسيق والخط (أبيض وأسود)</h3>
-                    
-                    <!-- اختيار الخط -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs text-zinc-400 mb-1">نوع الخط:</label>
-                            <select id="font-family" onchange="updateFormatting()" class="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
-                                <option value="font-tajawal" selected>تجول (Tajawal - أكاديمي حديث)</option>
-                                <option value="font-amiri">أميري (Amiri - كلاسيكي)</option>
-                                <option value="font-cairo">كايرو (Cairo - عريض)</option>
-                                <option value="font-traditional">Traditional Arabic</option>
-                                <option value="font-arial">Arial (قياسي)</option>
-                                <option value="font-times">Times New Roman</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-zinc-400 mb-1">حجم النص الأساسي:</label>
-                            <select id="font-size" onchange="updateFormatting()" class="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
-                                <option value="13pt">13pt - دقيق</option>
-                                <option value="14pt" selected>14pt - القياسي الرسمي</option>
-                                <option value="16pt">16pt - كبير</option>
-                                <option value="18pt">18pt - كبير جداً</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- تباعد الأسطر والفقرات -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs text-zinc-400 mb-1">تباعد الأسطر:</label>
-                            <select id="line-height" onchange="updateFormatting()" class="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
-                                <option value="1.3">1.3 - مدمج</option>
-                                <option value="1.5" selected>1.5 - مريح ومتوازن</option>
-                                <option value="1.8">1.8 - متسع للقراءة</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-zinc-400 mb-1">تباعد الفقرات:</label>
-                            <select id="paragraph-gap" onchange="updateFormatting()" class="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
-                                <option value="6px">6px - بسيط</option>
-                                <option value="12px" selected>12px - قياسي</option>
-                                <option value="18px">18px - واسع</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- الخيارات التلقائية والتحكم -->
-                    <div class="space-y-2 pt-2 border-t border-zinc-900">
-                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-zinc-300 cursor-pointer">
-                            <input type="checkbox" id="center-main-title" onchange="updateFormatting()" checked class="rounded border-zinc-700 text-zinc-100 focus:ring-0 bg-zinc-900">
-                            <span>توسيط العنوان الرئيسي تلقائياً</span>
-                        </label>
-                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-zinc-300 cursor-pointer">
-                            <input type="checkbox" id="bold-terms" onchange="updateFormatting()" checked class="rounded border-zinc-700 text-zinc-100 focus:ring-0 bg-zinc-900">
-                            <span>تظليل المصطلحات والتعاريف تلقائياً (تغميق المصطلح)</span>
-                        </label>
-                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-zinc-300 cursor-pointer">
-                            <input type="checkbox" id="underline-headings" onchange="updateFormatting()" checked class="rounded border-zinc-700 text-zinc-100 focus:ring-0 bg-zinc-900">
-                            <span>وضع خط أسفل العناوين الفرعية</span>
-                        </label>
-                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-zinc-300 cursor-pointer">
-                            <input type="checkbox" id="first-line-indent" onchange="updateFormatting()" checked class="rounded border-zinc-700 text-zinc-100 focus:ring-0 bg-zinc-900">
-                            <span>مسافة بادئة أول الفقرة (Indent)</span>
-                        </label>
-                        <label class="flex items-center space-x-2 space-x-reverse text-xs text-zinc-300 cursor-pointer">
-                            <input type="checkbox" id="page-border" onchange="updateFormatting()" class="rounded border-zinc-700 text-zinc-100 focus:ring-0 bg-zinc-900">
-                            <span>إضافة إطار صفحة كلاسيكي مزدوج</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- إحصائيات سريعة عن النص -->
-                <div class="flex items-center justify-between text-xs text-zinc-500 px-1">
-                    <span id="stat-words">عدد الكلمات: 0</span>
-                    <span id="stat-paragraphs">العناصر والفقرات: 0</span>
-                </div>
-
+            <div class="form-group">
+                <label for="fontSelect">نوع الخط الكلاسيكي:</label>
+                <select id="fontSelect" onchange="updatePreview()">
+                    <option value="'Amiri', serif">Amiri (أميـري كلاسيك)</option>
+                    <option value="'Tajawal', sans-serif">Tajawal (تجول حديث)</option>
+                    <option value="'Cairo', sans-serif">Cairo (القاهرة واضح)</option>
+                    <option value="'Traditional Arabic', serif">Traditional Arabic (التقليدي)</option>
+                </select>
             </div>
-        </aside>
 
-        <!-- لوحة المعاينة الحية لصفحة A4 (الجانب الأيسر) -->
-        <section id="preview-panel" class="flex-1 bg-zinc-950 p-4 lg:p-8 overflow-y-auto preview-container flex justify-center items-start min-h-[500px]">
-            <div class="a4-wrapper w-full flex justify-center">
-                <!-- صفحة A4 الحقيقية -->
-                <div id="print-area" class="a4-page font-tajawal transition-all" id="a4-preview-page">
-                    <!-- المخرجات المنسقة بالأبيض والأسود -->
-                    <div id="formatted-content" class="w-full"></div>
-                </div>
+            <div class="form-group">
+                <label for="inputText">النص المراد تنسيقه:</label>
+                <textarea id="inputText" oninput="updatePreview()" placeholder="اكتب النص هنا أو اختر نموذجاً سريعاً..."></textarea>
             </div>
-        </section>
 
-    </main>
+            <div class="actions-grid">
+                <button class="btn btn-word" onclick="exportWord()">📄 تصدير Word</button>
+                <button class="btn btn-pdf" onclick="exportPDF()">🖨️ طباعة / PDF</button>
+            </div>
+        </div>
 
-    <!-- إشعار التنبيه المنبثق -->
-    <div id="toast" class="no-print fixed bottom-5 left-5 bg-zinc-100 text-zinc-950 px-4 py-3 rounded-lg shadow-xl border border-zinc-300 text-sm font-bold flex items-center space-x-2 space-x-reverse transition-opacity duration-300 opacity-0 pointer-events-none z-50">
-        <span id="toast-icon">✨</span>
-        <span id="toast-message">تم التحديث</span>
+        <!-- معاينة المستند -->
+        <div class="preview-wrapper">
+            <div id="paper" class="paper">
+                <div id="docContent"></div>
+            </div>
+        </div>
     </div>
+</div>
 
-    <!-- الكود البرمجي لمُحرّك التحليل الذكي والتصدير -->
-    <script>
-        // ==========================================
-        // 1. المُحرّك الشامل للتكيف والتحليل (Universal Text Parser)
-        // ==========================================
-        function parseTextToElements(rawText) {
-            const lines = rawText.split(/\r?\n/);
-            const elements = [];
-            let isFirstNonEmpty = true;
+<script>
+    const templates = {
+        complaint: `مذكرة شكوى إدارية وأكاديمية\n\nالمرفوع إلى: أ.د. عميد الكلية المحترم\nمقدمة من الطالب: أحمد محمود (السنة الثالثة)\nضد الطالب: كريم خالد (السنة الثالثة)\n\nموضوع الشكوى:\nالتعدي على حقوق المشروع الجماعي وتكرار الإساءة السلوكية.\n\nأولاً: الوقائع\n1. بتاريخ 20 أكتوبر 2026، قام المشكو في حقه بالاستيلاء على الجزء البرمجي الخاص بي ونسبه لنفسه.\n2. عند محاولة النقاش معه هادئاً، قام بالتلفظ بعبارات غير لائقة أمام زملائنا.\n\nثانياً: الأسباب والمطالب\n- بناءً على لائحة الانضباط الطلابي بالجامعة المادة 12 الخاصة بانتهاك الأمانة الأكاديمية.\n\nثالثاً: الطلبات\nنلتمس من سيادتكم التكرم بـ:\n- إحالة الشكوى إلى لجنة الانضباط الطلابي.\n- التحقق من ملفات المشروع وإعادة التقييم الأكاديمي المستحق.\n\nتقبلوا بقبول فائق الاحترام والتقدير\nمقدمه الطالب: أحمد محمود`,
+        defense: `مذكرة دفاع في الدعوى رقم 102 لسنة 2026\n\nالمرفوع إلى: عدالة المحكمة الموقرة\nمقدمة من: وكيل المدعى عليه\n\nأولاً: الدفع بعدم قبول الدعوى\nتأسساً على نص المادة 18 من قانون الإجراءات، حيث لم يقم المدعي بتقديم السند القانوني الضامن لطلبه.\n\nثانياً: عن الموضوع\nإن الوقائع الواردة بصحيفة الدعوى جاءت مرسلة ولا تسانده أي قرينة قانونية صحيحة.\n\nثالثاً: الطلبات\nنلتمس من المحكمة الموقرة:\n- رفض الدعوى وإلزام المدعي المصاريف.\n\nوكيل المدعى عليه: المحامي`,
+        terms: `قائمة المصطلحات والتعاريف الأكاديمية\n\nالتحكيم التجاري: وسيلة بديلة لفض المنازعات بين الأطراف بواسطة محكمين يتم اختيارهم للفصل في النزاع.\nالعقد الأدبي: الاتفاق الذي يرتب التزامات اخلاقية دون اللجوء للقضاء.\nالقوة القاهرة: حدث استثنائي عام لا يمكن التنبؤ به يجعل تنفيذ الالتزام مستحيلاً.\n\nإعداد الطالب: أحمد محمود`,
+        minutes: `محضر اجتماع لجنة التنسيق الأكاديمي\n\nالموضوع: تنظيم سير المحاضرات وحل مشكلات المنصة\n\nأولاً: الحضور\n- ممثل الدفعة وأعضاء اللجنة الموقرين.\n\nثانياً: القرارات والتوصيات\n1. اعتماد جدول المحاضرات الجديد اعتباراً من الأسبوع القادم.\n2. حل المشكلات التقنية المتعلقة بالوصول للمواد الدراسية.\n\nرئيس الجلسة: أدمن الدفعة`
+    };
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
+    function loadTemplate(key) {
+        document.getElementById('inputText').value = templates[key];
+        updatePreview();
+    }
 
-                // 1. التعامل مع الأسطر الفارغة
-                if (!line) {
-                    elements.push({ type: 'EMPTY' });
-                    continue;
-                }
+    function analyzeLine(line) {
+        const text = line.trim();
+        if (!text) return { type: 'EMPTY' };
 
-                // 2. العنوان الرئيسي (Main Title)
-                const titleKeywords = /^(مذكرة|صحيفة|عقد|خطاب|تقرير|بيان|طلب|بحث|مشروع|جدول أعمال|محضر|دليل|عرض|لائحة|إعلان|دليل المصطلحات|التعاريف|شكوى|استقالة|توصية)/i;
-                const isShortTitle = line.length < 55 && !line.endsWith('.') && !line.endsWith(':');
+        const titles = ['مذكرة', 'صحيفة', 'عقد', 'شكوى', 'محضر', 'قائمة', 'تقرير', 'بيان'];
+        const headings = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 'خامساً', 'الوقائع', 'الأسباب', 'الطلبات', 'الموضوع', 'الحضور', 'القرارات'];
+        const closings = ['مقدمه', 'وكيل', 'المحامي', 'رئيس الجلسة', 'تقبلوا', 'والله ولي التوفيق'];
 
-                if (isFirstNonEmpty && (titleKeywords.test(line) || isShortTitle)) {
-                    elements.push({ type: 'MAIN_TITLE', text: line });
-                    isFirstNonEmpty = false;
-                    continue;
-                }
-                isFirstNonEmpty = false;
-
-                // 3. التوقيعات والختام (Closing & Signatures)
-                const closingKeywords = /^(توقيع|مقدمه|مقدم الطلب|مقدم الشكوى|الطالب|وكيل|شاكرين|وتفضلوا|تحريراً في|حرر في|والله ولي التوفيق|المحامي|المرسل|رئيس اللجنة|اعتماد|أمين السر|حرر بواسطة)/i;
-                if (closingKeywords.test(line) || line.includes("والله ولي التوفيق") || line.includes("وتقبلوا بقبول") || line.includes("مع فائق الاحترام")) {
-                    elements.push({ type: 'CLOSING', text: line });
-                    continue;
-                }
-
-                // 4. فحص صيغة المصطلح والتعريف (Key: Value or Term: Definition)
-                // النمط: نص أقصر من 45 حرف يليه نقطتين ":" ثم شرح أو تعريف
-                const termPattern = /^([^:\n]{2,45}):\s*(.+)$/;
-                const termMatch = line.match(termPattern);
-                
-                // التأكد من أن المفتاح ليس إحدى العناوين القياسية مثل "أولاً:"
-                const headingWords = /^(أولاً|ثانياً|ثالثاً|رابعاً|خامساً|سادساً|سابعاً|ثامناً|تاسعاً|عاشراً|الموضوع|الوقائع|الأسباب|الطلبات|التوصيات|النتائج|الحضور|جدول الأعمال|موضوع الشكوى|المرفوع إلى)/i;
-
-                if (termMatch && !headingWords.test(termMatch[1].trim())) {
-                    elements.push({ 
-                        type: 'TERM_DEF', 
-                        term: termMatch[1].trim(), 
-                        def: termMatch[2].trim() 
-                    });
-                    continue;
-                }
-
-                // 5. العناوين الفرعية والتقسيمات (Section Headings)
-                const numberedHeading = /^(\d+|[أ-ي])[\.-]\s+/;
-
-                if (headingWords.test(line) || line.endsWith(':') || (numberedHeading.test(line) && line.length < 60 && !line.endsWith('.'))) {
-                    elements.push({ type: 'HEADING', text: line });
-                    continue;
-                }
-
-                // 6. القوائم والتعداد النقطي/الرقمي (List Items)
-                const listBulletPattern = /^([-*•◦▪]|(\d+|[أ-ي])[\)-])\s+/;
-                if (listBulletPattern.test(line)) {
-                    elements.push({ type: 'LIST_ITEM', text: line });
-                    continue;
-                }
-
-                // 7. الفقرات العامة العادية (Standard Paragraph)
-                elements.push({ type: 'PARAGRAPH', text: line });
-            }
-
-            return elements;
+        if (titles.some(t => text.startsWith(t)) && text.length < 50) return { type: 'TITLE', text };
+        if (headings.some(h => text.startsWith(h)) || text.endsWith(':')) return { type: 'HEADING', text };
+        if (closings.some(c => text.startsWith(c))) return { type: 'CLOSING', text };
+        
+        if (text.includes(':') && !text.endsWith(':') && text.indexOf(':') < 35) {
+            const parts = text.split(':');
+            return { type: 'TERM', term: parts[0] + ':', desc: parts.slice(1).join(':') };
         }
 
-        // ==========================================
-        // 2. تحديث التنسيق والمعاينة الحية (A4 Black & White)
-        // ==========================================
-        function updateFormatting() {
-            const rawText = document.getElementById('raw-text').value;
-            const container = document.getElementById('formatted-content');
-            const pageBorder = document.getElementById('page-border').checked;
-            const a4Page = document.getElementById('print-area');
+        return { type: 'PARAGRAPH', text };
+    }
 
-            // إعدادات التحكم
-            const fontFamilyClass = document.getElementById('font-family').value;
-            const fontSize = document.getElementById('font-size').value;
-            const lineHeight = document.getElementById('line-height').value;
-            const paragraphGap = document.getElementById('paragraph-gap').value;
-            const centerMainTitle = document.getElementById('center-main-title').checked;
-            const underlineHeadings = document.getElementById('underline-headings').checked;
-            const firstLineIndent = document.getElementById('first-line-indent').checked;
-            const boldTerms = document.getElementById('bold-terms').checked;
+    function updatePreview() {
+        const text = document.getElementById('inputText').value;
+        const font = document.getElementById('fontSelect').value;
+        const container = document.getElementById('docContent');
+        const paper = document.getElementById('paper');
 
-            // تطبيق نوع الخط والإطار على صفحة A4
-            a4Page.className = `a4-page ${fontFamilyClass} ${pageBorder ? 'page-border-classic' : ''} transition-all`;
-            a4Page.style.fontSize = fontSize;
-            a4Page.style.lineHeight = lineHeight;
+        paper.style.fontFamily = font;
+        container.innerHTML = '';
 
-            // تحليل النص
-            const elements = parseTextToElements(rawText);
-            
-            // تحديث الإحصائيات
-            const wordCount = rawText.trim() ? rawText.trim().split(/\s+/).length : 0;
-            const nonEmptyElements = elements.filter(e => e.type !== 'EMPTY').length;
-            document.getElementById('stat-words').innerText = `عدد الكلمات: ${wordCount}`;
-            document.getElementById('stat-paragraphs').innerText = `العناصر والفقرات: ${nonEmptyElements}`;
-
-            if (!rawText.trim()) {
-                container.innerHTML = `
-                    <div class="h-96 flex flex-col items-center justify-center text-zinc-400 border-2 border-dashed border-zinc-300 rounded-lg p-6 text-center">
-                        <svg class="w-12 h-12 mb-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        <p class="font-bold text-base text-zinc-700">المعاينة الحية خالية حالياً</p>
-                        <p class="text-xs text-zinc-500 mt-1">ضع أي نص (شكوى، مصطلحات، تقرير، محضر) في الصندوق الجانبي ليتكيف معه المحرر فوراً.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let htmlOutput = '';
-
-            elements.forEach(item => {
-                if (item.type === 'EMPTY') {
-                    htmlOutput += `<div style="height: ${paragraphGap}"></div>`;
-                } else if (item.type === 'MAIN_TITLE') {
-                    const alignClass = centerMainTitle ? 'text-center' : 'text-right';
-                    htmlOutput += `
-                        <h1 class="${alignClass} font-bold text-2xl mb-5 pb-2 border-b-2 border-black tracking-wide" style="margin-top: 10px; margin-bottom: 20px;">
-                            ${escapeHtml(item.text)}
-                        </h1>
-                    `;
-                } else if (item.type === 'HEADING') {
-                    const underlineStyle = underlineHeadings ? 'text-decoration: underline; text-underline-offset: 4px;' : '';
-                    htmlOutput += `
-                        <h2 class="font-bold text-lg text-black mt-4 mb-2" style="${underlineStyle}">
-                            ${escapeHtml(item.text)}
-                        </h2>
-                    `;
-                } else if (item.type === 'TERM_DEF') {
-                    // تنسيق مصطلح وتعريف
-                    const termFontWeight = boldTerms ? 'font-bold' : 'font-semibold';
-                    htmlOutput += `
-                        <div class="mb-2 text-justify text-black" style="margin-bottom: ${paragraphGap};">
-                            <strong class="${termFontWeight}">${escapeHtml(item.term)}:</strong>
-                            <span>${escapeHtml(item.def)}</span>
-                        </div>
-                    `;
-                } else if (item.type === 'LIST_ITEM') {
-                    htmlOutput += `
-                        <div class="flex items-start space-x-2 space-x-reverse my-1 pr-3">
-                            <span class="font-bold text-black">•</span>
-                            <span class="flex-1 text-justify text-black">${escapeHtml(item.text.replace(/^([-*•◦▪]|(\d+|[أ-ي])[\)-])\s+/, ''))}</span>
-                        </div>
-                    `;
-                } else if (item.type === 'CLOSING') {
-                    htmlOutput += `
-                        <div class="text-left font-bold text-base mt-6 mb-2 pl-4" style="margin-top: 25px;">
-                            ${escapeHtml(item.text)}
-                        </div>
-                    `;
-                } else { // PARAGRAPH
-                    const indentStyle = firstLineIndent ? 'text-indent: 1.2cm;' : '';
-                    htmlOutput += `
-                        <p class="text-justify leading-relaxed mb-3 text-black" style="${indentStyle} margin-bottom: ${paragraphGap};">
-                            ${escapeHtml(item.text)}
-                        </p>
-                    `;
-                }
-            });
-
-            container.innerHTML = htmlOutput;
+        if (!text.trim()) {
+            container.innerHTML = '<p style="text-align:center; color:#888; margin-top:50px;">سيظهر التنسيق المباشر للمستند هنا...</p>';
+            return;
         }
 
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
+        const lines = text.split('\n');
 
-        // ==========================================
-        // 3. النماذج التجريبية السريعة المختلفة
-        // ==========================================
-        const samples = {
-            student: `مذكرة شكوى أكاديمية وإدارية
-المرفوع إلى: أ.د. عميد الكلية المحترم
-مقدمة من الطالب: أحمد محمود (السنة الثالثة - قسم الحاسبات)
-ضــد الطالب: كريم خالد (السنة الثالثة - قسم الحاسبات)
+        lines.forEach(line => {
+            const parsed = analyzeLine(line);
+            if (parsed.type === 'EMPTY') return;
 
-موضوع الشكوى:
-التعدي على حقوق المشروع الجماعي وتكرار الإساءة السلوكية داخل قاعة المحاضرات.
+            const el = document.createElement('div');
 
-أولاً: الوقائع
-1. بتاريخ 20 أكتوبر 2026، قام المشكو في حقه بالاستيلاء على الجزء البرمجي الخاص بي في مشروع التخرج ونسبه لنفسه أمام أستاذ المادة.
-2. عند محاولة نقاش الأمر معه هادئاً، قام بالتلفظ بعبارات غير لائقة أمام زملائنا بالدفعة.
-
-ثانياً: الأسباب والمطالب
-- بناءً على لائحة الانضباط الطلابي بالجامعة، المادة 12 الخاصة بانتهاك الأمانة الأكاديمية.
-- السلوك الصادر يتنافى مع القواعد الإدارية والجامعية المرعية.
-
-ثالثاً: الطلبات
-نلتمس من سيادتكم التكرم بـ:
-- إحالة الشكوى إلى لجنة الانضباط الطلابي.
-- التحقق من ملفات المشروع وإعادة التقييم الأكاديمي المستحق.
-
-وتقبلوا بقبول فائق الاحترام والتقدير
-مقدمه الطالب: أحمد محمود
-التاريخ: 26 أكتوبر 2026`,
-
-            terms: `دليل المصطلحات والتعريفات التقنية
-المعد من قبل: وحدة تطوير البرمجيات والأبحاث
-
-المصطلحات الأساسية:
-الذكاء الاصطناعي: قدرة الأنظمة الحاسوبية على محاكاة القدرات الذهنية البشرية وأنماط التعلم الذاتي.
-واجهة برمجة التطبيقات: جسر برمجي يتيح للتطبيقات المختلفة التواصل وتبادل البيانات بينها بنظام وآمان.
-معالجة اللغات الطبيعية: فرع تقني يُمكّن الحاسوب من فهم واستخلاص المعاني من النصوص البشرية بكفاءة.
-الأتمتة التلقائية: تنفيذ العمليات والمهام التكرارية دون الحاجة إلى تدخل بشري مباشر.
-التشفير النهائي: تقنية أمنية تضمن عدم قراءة الرسائل إلا من قبل الطرفين المباشرين للمحادثة.
-
-ملاحظات ختامية:
-تُطبق هذه التعريفات في كافة الوثائق والمستندات التقنية الصادرة عن الشركة.
-
-حرر بواسطة: مهندس النظم`,
-
-            legal: `مذكرة دفاع ورأي قانوني
-مقدمة من: مكتب الاستشارات القانونية
-بشأن: تفنيد ادعاءات المسؤولية العقدية في الدعوى رقم 892
-
-أولاً: التكييف القانوني للواقعة
-إن النزاع الماثل لا ينطوي على خطأ عقدي، وإنما يندرج تحت نص المادة 215 من القانون المدني المتعلقة بالقوة القاهرة والظروف الطارئة.
-
-ثانياً: الأسانيد
-- عدم توافر رابطة السببية بين الفعل والضرر المدعى به.
-- تنفيذ الموكل لـ 80% من بنود الاتفاق قبل وقوع الجائحة الإدارية.
-
-ثالثاً: النتيجة والطلب
-إلغاء المطالبة بالتعويض وإلزام المدعي بالمصروفات.
-
-والله ولي التوفيق
-مستشار القانون: محمد العتيبي`,
-
-            meeting: `محضر اجتماع لجنة إدارة المشروعات
-تاريخ الاجتماع: 26 أكتوبر 2026
-مكان الاجتماع: قاعة الاجتماعات الرئيسية - المقر الإداري
-
-الحضور:
-- رئيس اللجنة: د. خالد عبد الرحمن
-- أمين السر: م. سارة أحمد
-- الأعضاء: م. عادل الشريف، د. هدى محمود
-
-جدول الأعمال:
-1. استعراض نسبة الإنجاز في الربع الثالث.
-2. مناقشة التحديات والحلول المقترحة.
-
-التوصيات والقرارات:
-- التوصية الأولى: تمديد الموعد النهائي لتسليم المرحلة الثانية مدة أسبوعين.
-- التوصية الثانية: تخصيص ميزانية إضافية للدعم الفني والتدريب.
-- التوصية الثالثة: عقد اجتماع متابعة أسبوعي كل يوم اثنين.
-
-توقيع أمين السر: م. سارة أحمد
-اعتماد رئيس اللجنة: د. خالد عبد الرحمن`
-        };
-
-        function loadSample(type) {
-            document.getElementById('raw-text').value = samples[type];
-            updateFormatting();
-            showToast("تم تحميل النموذج بنجاح ✨");
-        }
-
-        function clearText() {
-            document.getElementById('raw-text').value = '';
-            updateFormatting();
-            showToast("تم مسح النص");
-        }
-
-        // ==========================================
-        // 4. التصدير والطباعة (PDF & Word .docx)
-        // ==========================================
-        function printDocument() {
-            const rawText = document.getElementById('raw-text').value;
-            if (!rawText.trim()) {
-                showToast("⚠️ يرجى إدخال نص أولاً قبل الطباعة.");
-                return;
-            }
-            window.print();
-        }
-
-        function exportToWord() {
-            const rawText = document.getElementById('raw-text').value;
-            if (!rawText.trim()) {
-                showToast("⚠️ يرجى إدخال نص أولاً للتصدير.");
-                return;
-            }
-
-            if (typeof docx === 'undefined') {
-                showToast("❌ خطأ: لم يتم تحميل مكتبة Word. تحقق من الإنترنت.");
-                return;
-            }
-
-            try {
-                const { Document, Packer, Paragraph, TextRun, AlignmentType, UnderlineType } = window.docx;
-
-                const centerMainTitle = document.getElementById('center-main-title').checked;
-                const underlineHeadings = document.getElementById('underline-headings').checked;
-                const firstLineIndent = document.getElementById('first-line-indent').checked;
-                
-                const fontSelect = document.getElementById('font-family');
-                const fontName = fontSelect.options[fontSelect.selectedIndex].text.split(' ')[0];
-
-                const elements = parseTextToElements(rawText);
-                const docParagraphs = [];
-
-                elements.forEach(item => {
-                    if (item.type === 'EMPTY') {
-                        docParagraphs.push(new Paragraph({ text: "", spaceAfter: 120 }));
-                    } else if (item.type === 'MAIN_TITLE') {
-                        docParagraphs.push(new Paragraph({
-                            alignment: centerMainTitle ? AlignmentType.CENTER : AlignmentType.RIGHT,
-                            bidirectional: true,
-                            spaceBefore: 240,
-                            spaceAfter: 300,
-                            children: [
-                                new TextRun({
-                                    text: item.text,
-                                    bold: true,
-                                    size: 36, // 18pt
-                                    font: fontName,
-                                    rightToLeft: true
-                                })
-                            ]
-                        }));
-                    } else if (item.type === 'HEADING') {
-                        docParagraphs.push(new Paragraph({
-                            alignment: AlignmentType.RIGHT,
-                            bidirectional: true,
-                            spaceBefore: 200,
-                            spaceAfter: 120,
-                            children: [
-                                new TextRun({
-                                    text: item.text,
-                                    bold: true,
-                                    size: 30, // 15pt
-                                    underline: underlineHeadings ? { type: UnderlineType.SINGLE } : undefined,
-                                    font: fontName,
-                                    rightToLeft: true
-                                })
-                            ]
-                        }));
-                    } else if (item.type === 'TERM_DEF') {
-                        docParagraphs.push(new Paragraph({
-                            alignment: AlignmentType.JUSTIFY,
-                            bidirectional: true,
-                            spaceAfter: 160,
-                            children: [
-                                new TextRun({
-                                    text: item.term + ": ",
-                                    bold: true,
-                                    size: 28, // 14pt
-                                    font: fontName,
-                                    rightToLeft: true
-                                }),
-                                new TextRun({
-                                    text: item.def,
-                                    size: 28, // 14pt
-                                    font: fontName,
-                                    rightToLeft: true
-                                })
-                            ]
-                        }));
-                    } else if (item.type === 'CLOSING') {
-                        docParagraphs.push(new Paragraph({
-                            alignment: AlignmentType.LEFT,
-                            bidirectional: true,
-                            spaceBefore: 300,
-                            spaceAfter: 120,
-                            children: [
-                                new TextRun({
-                                    text: item.text,
-                                    bold: true,
-                                    size: 28, // 14pt
-                                    font: fontName,
-                                    rightToLeft: true
-                                })
-                            ]
-                        }));
-                    } else { // PARAGRAPH & LIST_ITEM
-                        docParagraphs.push(new Paragraph({
-                            alignment: AlignmentType.JUSTIFY,
-                            bidirectional: true,
-                            spaceAfter: 160,
-                            indent: firstLineIndent && item.type === 'PARAGRAPH' ? { firstLine: 720 } : undefined,
-                            children: [
-                                new TextRun({
-                                    text: item.text,
-                                    size: 28, // 14pt
-                                    font: fontName,
-                                    rightToLeft: true
-                                })
-                            ]
-                        }));
-                    }
-                });
-
-                const doc = new Document({
-                    sections: [{
-                        properties: {
-                            page: {
-                                margin: {
-                                    top: 1440,    // 2.54 cm
-                                    bottom: 1440,
-                                    left: 1440,
-                                    right: 1440
-                                }
-                            }
-                        },
-                        children: docParagraphs
-                    }]
-                });
-
-                Packer.toBlob(doc).then(blob => {
-                    saveAs(blob, "مستند_مُنظم_المحرر_الذكي.docx");
-                    showToast("📥 تم التصدير إلى Word بنجاح!");
-                }).catch(err => {
-                    console.error(err);
-                    showToast("❌ حدث خطأ أثناء إنشاء ملف Word");
-                });
-
-            } catch (e) {
-                console.error(e);
-                showToast("❌ تعذر تصدير الملف: " + e.message);
-            }
-        }
-
-        // ==========================================
-        // 5. التبديل بين اللوحات في الهواتف الذكية
-        // ==========================================
-        function switchMobileTab(tab) {
-            const editorPanel = document.getElementById('editor-panel');
-            const previewPanel = document.getElementById('preview-panel');
-            const editorBtn = document.getElementById('tab-editor-btn');
-            const previewBtn = document.getElementById('tab-preview-btn');
-
-            if (tab === 'editor') {
-                editorPanel.classList.remove('hidden');
-                previewPanel.classList.add('hidden');
-                editorBtn.className = 'flex-1 py-2 text-center text-sm font-semibold rounded bg-zinc-800 text-white';
-                previewBtn.className = 'flex-1 py-2 text-center text-sm font-semibold rounded text-zinc-400';
+            if (parsed.type === 'TITLE') {
+                el.className = 'doc-title';
+                el.innerText = parsed.text;
+            } else if (parsed.type === 'HEADING') {
+                el.className = 'doc-heading';
+                el.innerText = parsed.text;
+            } else if (parsed.type === 'CLOSING') {
+                el.className = 'doc-closing';
+                el.innerText = parsed.text;
+            } else if (parsed.type === 'TERM') {
+                el.className = 'doc-term';
+                el.innerHTML = `<span class="doc-term-bold">${parsed.term}</span> ${parsed.desc}`;
             } else {
-                editorPanel.classList.add('hidden');
-                previewPanel.classList.remove('hidden');
-                previewPanel.classList.add('flex');
-                previewBtn.className = 'flex-1 py-2 text-center text-sm font-semibold rounded bg-zinc-800 text-white';
-                editorBtn.className = 'flex-1 py-2 text-center text-sm font-semibold rounded text-zinc-400';
+                el.className = 'doc-paragraph';
+                el.innerText = parsed.text;
             }
-        }
 
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-message').innerText = message;
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 3000);
-        }
+            container.appendChild(el);
+        });
+    }
 
-        window.onload = function() {
-            // تحميل نموذج الشكوى الطلابية كمثال مبدئي
-            loadSample('student');
-        };
-    </script>
+    // تصدير Word محلي 100% بدون أي سيرفر أو اتصال بالنت
+    function exportWord() {
+        const content = document.getElementById('docContent').innerHTML;
+        const font = document.getElementById('fontSelect').value.split(',')[0].replace(/'/g, '');
+
+        const htmlDocument = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <style>
+                    body { font-family: '${font}', 'Traditional Arabic', serif; direction: rtl; text-align: right; }
+                    .doc-title { text-align: center; font-size: 18pt; font-weight: bold; margin-bottom: 20px; text-decoration: underline; }
+                    .doc-heading { font-size: 14pt; font-weight: bold; margin-top: 15px; text-decoration: underline; }
+                    .doc-paragraph { font-size: 12.5pt; line-height: 1.5; text-align: justify; text-indent: 1cm; margin-bottom: 6px; }
+                    .doc-term { font-size: 12.5pt; margin-bottom: 6px; }
+                    .doc-term-bold { font-weight: bold; }
+                    .doc-closing { text-align: left; font-weight: bold; font-size: 13pt; margin-top: 25px; }
+                </style>
+            </head>
+            <body>
+                ${content}
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\ufeff' + htmlDocument], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'مستند_مُنظم.doc';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function exportPDF() {
+        window.print();
+    }
+
+    // تحميل نموذج افتراضي عند الفتح
+    loadTemplate('complaint');
+</script>
+
 </body>
 </html>
-```
