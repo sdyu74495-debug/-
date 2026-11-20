@@ -1,0 +1,3642 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ميزان برو (Mizan Pro) | نظام إدارة مكاتب المحاماة المتكامل</title>
+
+  <!-- الخطوط العربية: Cairo للواجهة العصرية و Amiri للمطبوعات القضائية الرسمية -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Cairo', 'sans-serif'],
+            legal: ['Amiri', 'serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* =========================================================================
+       1. متغيرات التصميم الزجاجي والوضع الليلي والنهاري
+       ========================================================================= */
+    :root {
+      --bg-canvas: #f1f5f9;
+      --glass-surface: rgba(255, 255, 255, 0.90);
+      --glass-border: rgba(148, 163, 184, 0.34);
+      --glass-shadow: 0 12px 32px -6px rgba(15, 23, 42, 0.08);
+    }
+    html.dark {
+      --bg-canvas: #060a12;
+      --glass-surface: rgba(15, 23, 42, 0.80);
+      --glass-border: rgba(148, 163, 184, 0.16);
+      --glass-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.65);
+    }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: var(--bg-canvas);
+      background-image:
+        radial-gradient(at 10% 8%, rgba(245, 158, 11, 0.10) 0px, transparent 50%),
+        radial-gradient(at 90% 92%, rgba(16, 185, 129, 0.09) 0px, transparent 50%);
+      background-attachment: fixed;
+      overflow-x: hidden;
+    }
+
+    .glass-card {
+      background: var(--glass-surface);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+    }
+
+    .glass-header {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    html.dark .glass-header {
+      background: rgba(8, 13, 26, 0.92);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(245, 158, 11, 0.65);
+    }
+
+    /* =========================================================================
+       2. ورقة الطباعة الرسمية (A4 - أسود وأبيض صرف - خط 17pt - بدون ألوان أو إطارات)
+       ========================================================================= */
+    #print-container {
+      display: none;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 18mm 16mm 18mm 16mm;
+      }
+
+      html, body {
+        background: #ffffff !important;
+        background-image: none !important;
+        color: #000000 !important;
+        font-family: 'Amiri', 'Cairo', serif !important;
+        font-size: 17pt !important;
+        line-height: 1.75 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      #auth-screen,
+      #workspace-shell,
+      #modal-root,
+      #toast-container {
+        display: none !important;
+      }
+
+      #print-container {
+        display: block !important;
+        width: 100% !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 17pt !important;
+      }
+
+      #print-container * {
+        color: #000000 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        border-radius: 0 !important;
+        font-size: 17pt !important;
+        font-family: 'Amiri', 'Cairo', serif !important;
+      }
+
+      #print-container .print-doc-sheet {
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      #print-container table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 12pt 0 !important;
+      }
+
+      #print-container th,
+      #print-container td {
+        border: 1pt solid #000000 !important;
+        padding: 6pt 8pt !important;
+        text-align: right !important;
+        vertical-align: top !important;
+      }
+
+      #print-container hr {
+        border: none !important;
+        border-top: 1pt solid #000000 !important;
+        margin: 10pt 0 !important;
+      }
+    }
+  </style>
+</head>
+<body class="text-slate-800 dark:text-slate-100 antialiased selection:bg-amber-500/30">
+
+  <!-- حاوية الإشعارات العائمة -->
+  <div id="toast-container" class="fixed bottom-4 left-4 z-[130] flex flex-col gap-2 max-w-sm w-[calc(100%-2rem)] pointer-events-none"></div>
+
+  <!-- حاوية الطباعة الرسمية الصرفة (A4 - أسود وأبيض - خط 17pt) -->
+  <div id="print-container" dir="rtl"></div>
+
+  <!-- =========================================================================
+       الشاشة الأولى: بوابة الترحيب والتفعيل والدخول والاستعلام (#auth-screen)
+       ========================================================================= -->
+  <section id="auth-screen" class="min-h-screen flex flex-col justify-between p-4 sm:p-6">
+
+    <!-- الشريط العلوي على شاشة الترحيب -->
+    <header class="max-w-6xl w-full mx-auto glass-card rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 text-white flex items-center justify-center shadow-lg">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m-7-4h14M5 7l7-2 7 2M5 7l-2 6h4L5 7zm14 0l-2 6h4l-2-6z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-black text-lg sm:text-xl text-amber-500">ميزان برو</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">LAW OFFICE SYSTEM</span>
+          </div>
+          <span class="block text-[11px] text-slate-500 dark:text-slate-400">نظام إدارة مكاتب المحاماة بقاعدة بيانات محلية مشفّرة</span>
+        </div>
+      </div>
+
+      <!-- أزرار الوصول السريع -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="openClientPortalModal()"
+          class="px-3.5 py-2 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 text-xs font-extrabold flex items-center gap-1.5 transition">
+          <span>🔍</span><span>بوابة استعلام الموكلين</span>
+        </button>
+
+        <button onclick="openSuperAdminModal()" title="إدارة التراخيص والاشتراكات"
+          class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/40 text-xs font-extrabold flex items-center gap-1.5 transition">
+          <span>👑</span><span>إدارة التراخيص</span>
+        </button>
+
+        <button onclick="toggleSound()" id="auth-sound-btn" title="تفعيل/كتم الصوت"
+          class="p-2.5 rounded-xl glass-card text-xs transition">
+          🔊
+        </button>
+
+        <button onclick="toggleTheme()" title="الوضع الليلي/النهاري"
+          class="p-2.5 rounded-xl glass-card text-xs transition">
+          <span class="theme-icon">☀️</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- البطاقة المركزية متعددة المسارات -->
+    <div class="max-w-2xl w-full mx-auto my-6 glass-card rounded-3xl p-5 sm:p-8 border border-amber-500/30 space-y-6">
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-extrabold">
+          <span>🛡️</span>
+          <span>خصوصية مطلقة 100%: بيانات مكتبك محفوظة محلياً داخل جهازك</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">بوابة الدخول والتفعيل الذكية</h1>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+          بصمة الجهاز الحالية: <strong id="auth-device-fp" class="font-mono text-amber-500 select-all">FP-LOADING</strong>
+        </p>
+      </div>
+
+      <!-- شريط عودة سريع إذا كان هناك مكتب مفعّل مسبقاً على الجهاز -->
+      <div id="existing-office-banner" class="hidden p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="text-xs sm:text-sm">
+          <span class="block font-black text-emerald-500">✅ يوجد مكتب مفعّل مسجل على هذا الجهاز:</span>
+          <strong id="existing-office-title" class="text-slate-800 dark:text-white">مكتب المحاماة</strong>
+        </div>
+        <button onclick="enterActiveWorkspace()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shrink-0 shadow">
+          🚀 الدخول إلى مساحة العمل
+        </button>
+      </div>
+
+      <!-- أزرار الاختيار الثلاثة -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 rounded-2xl bg-slate-200/80 dark:bg-slate-900/90">
+        <button id="auth-tab-activate" onclick="switchAuthTab('activate')"
+          class="py-2.5 px-3 rounded-xl text-xs font-extrabold bg-amber-500 text-slate-950 shadow transition">
+          🔑 تفعيل مكتب جديد
+        </button>
+        <button id="auth-tab-restore" onclick="switchAuthTab('restore')"
+          class="py-2.5 px-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 transition">
+          📦 استعادة نسخة (.mizan)
+        </button>
+        <button id="auth-tab-client" onclick="switchAuthTab('client')"
+          class="py-2.5 px-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 transition">
+          🔍 استعلام موكل
+        </button>
+      </div>
+
+      <!-- المسار 1: تفعيل مكتب جديد بكود اشتراك -->
+      <div id="auth-panel-activate" class="space-y-4">
+        <form onsubmit="handleActivateNewOffice(event)" class="space-y-3.5 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold mb-1">اسم مكتب المحاماة *</label>
+            <input id="act-office-name" name="officeName" required placeholder="مثال: مكتب المستشار طارق المنشاوي للمحاماة"
+              class="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500" />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">اسم مدير المكتب *</label>
+              <input id="act-manager-name" name="managerName" required placeholder="أ. طارق المنشاوي"
+                class="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-amber-500" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">رقم هاتف المكتب *</label>
+              <input id="act-phone" name="phone" required placeholder="01001234567"
+                class="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono focus:outline-none focus:border-amber-500" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">كود التفعيل المشفّر (License Key) *</label>
+            <input id="act-license-key" name="licenseKey" required placeholder="MZ-PRO-365-XXXX-XXXXXX"
+              class="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/50 font-mono font-extrabold text-center uppercase tracking-wider focus:outline-none focus:border-amber-500" />
+          </div>
+
+          <button type="submit"
+            class="w-full py-3.5 rounded-2xl bg-gradient-to-l from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 transition">
+            🚀 تفعيل المكتب وإنشاء قاعدة البيانات المحلية
+          </button>
+        </form>
+      </div>
+
+      <!-- المسار 2: استعادة نسخة احتياطية مشفّرة (.mizan) -->
+      <form id="auth-panel-restore" onsubmit="handleRestoreBackupFromGate(event)" class="hidden space-y-4 text-xs sm:text-sm">
+        <div class="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          اختر ملف النسخة الاحتياطية المشفّرة (<strong class="font-mono text-sky-500">.mizan</strong>) وأدخل كلمة مرور فك التشفير لاستعادة جميع ملفات الموكلين والقضايا والمرفقات فوراً.
+        </div>
+        <div>
+          <label class="block font-bold mb-1">ملف النسخة الاحتياطية (.mizan) *</label>
+          <input type="file" id="gate-backup-file" accept=".mizan,.json" required
+            class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs" />
+        </div>
+        <div>
+          <label class="block font-bold mb-1">كلمة مرور فك التشفير *</label>
+          <input type="password" id="gate-backup-password" required placeholder="أدخل كلمة مرور التشفير..."
+            class="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-sky-500" />
+        </div>
+        <button type="submit"
+          class="w-full py-3.5 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm shadow-lg transition">
+          🔓 فك التشفير واستعادة بيانات المكتب
+        </button>
+      </form>
+
+      <!-- المسار 3: بوابة استعلام الموكلين المدمجة -->
+      <div id="auth-panel-client" class="hidden space-y-4 text-xs sm:text-sm">
+        <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          أدخل <strong>كود متابعة القضية</strong> المسلّم لك من المكتب (مثل <code class="font-mono font-bold text-amber-500">TRK-...</code>) أو الصق <strong>رمز المتابعة المحمول</strong> (<code class="font-mono text-emerald-500">MIZAN-STATUS-...</code>) للاطلاع على آخر قرار جلسة وموعد الجلسة القادمة فقط.
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input id="inline-cp-input" placeholder="اكتب كود المتابعة أو رمز المتابعة المحمول..."
+            onkeydown="if(event.key==='Enter'){event.preventDefault();runClientInquiry('inline-cp-input','inline-cp-result');}"
+            class="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono font-extrabold text-center focus:outline-none focus:border-emerald-500" />
+          <button type="button" onclick="runClientInquiry('inline-cp-input','inline-cp-result')"
+            class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shrink-0 shadow">
+            🔍 استعلام فوري
+          </button>
+        </div>
+        <div id="inline-cp-result"></div>
+      </div>
+    </div>
+    <footer class="text-center text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 space-y-1">
+      <p>ميزان برو (Mizan Pro) — نظام إدارة مكاتب المحاماة المحلي والمشفّر</p>
+      <p class="font-extrabold text-amber-500">جميع الحقوق محفوظة © 2026 — تطوير وبرمجة: عمرو ربيع (Amr Rabie)</p>
+    </footer>
+  </section>
+
+  <!-- =========================================================================
+       الشاشة الثانية: مساحة عمل مكتب المحاماة المتكاملة (#workspace-shell)
+       ========================================================================= -->
+  <div id="workspace-shell" class="hidden min-h-screen flex flex-col">
+
+    <!-- الشريط العلوي لمساحة العمل -->
+    <header class="glass-header sticky top-0 z-40 px-3 sm:px-6 py-3">
+      <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2.5">
+
+        <!-- يمين: زر قائمة الموبايل + هوية المكتب -->
+        <div class="flex items-center gap-2.5">
+          <button onclick="toggleMobileDrawer()" aria-label="القائمة"
+            class="lg:hidden p-2.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-amber-500/20 text-slate-700 dark:text-slate-200 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigateModule('dashboard')">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 text-white flex items-center justify-center shadow">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m-7-4h14M5 7l7-2 7 2M5 7l-2 6h4L5 7zm14 0l-2 6h4l-2-6z" />
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-black text-base sm:text-lg text-amber-500">ميزان برو</span>
+                <span id="header-tier-badge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">PRO</span>
+                <span id="header-storage-pill" class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">0.00 MB</span>
+              </div>
+              <p id="header-office-name" class="text-[11px] font-bold text-slate-600 dark:text-slate-300 truncate max-w-[180px] sm:max-w-xs">مكتب المحاماة</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- وسط: محوّل الصلاحيات السريع (RBAC) -->
+        <div class="order-3 md:order-2 w-full md:w-auto flex items-center justify-center">
+          <div class="flex items-center gap-1.5 bg-slate-200/75 dark:bg-slate-800/85 px-3 py-1.5 rounded-2xl border border-slate-300/50 dark:border-slate-700/60 w-full md:w-auto justify-between">
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">الصلاحية:</span>
+            <select id="header-role-select" onchange="switchUserRole(this.value)"
+              class="bg-transparent text-xs font-extrabold text-slate-800 dark:text-white focus:outline-none cursor-pointer">
+              <option value="manager" class="bg-slate-900 text-white">👔 مدير المكتب (كامل الصلاحيات)</option>
+              <option value="lawyer" class="bg-slate-900 text-white">⚖️ محامي (قضايا وجلسات وحوافظ)</option>
+              <option value="secretary" class="bg-slate-900 text-white">🗂️ إداري / سكرتارية (موكلين ومهام)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- يسار: أزرار النسخ الاحتياطي، بوابة الموكلين، إدارة التراخيص، الصوت والثيم -->
+        <div class="order-2 md:order-3 flex items-center gap-1.5 sm:gap-2">
+          <button onclick="openBackupSyncModal()" title="النسخ الاحتياطي المشفر (.mizan) ومزامنة اليوم"
+            class="px-3 py-2 rounded-xl bg-sky-600/15 hover:bg-sky-600/25 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-xs font-extrabold flex items-center gap-1.5 transition">
+            <span>💾</span>
+            <span class="hidden xl:inline">نسخ احتياطي</span>
+          </button>
+
+          <button onclick="openClientPortalModal()" title="بوابة استعلام الموكلين"
+            class="px-3 py-2 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-extrabold flex items-center gap-1.5 transition">
+            <span>🔍</span>
+            <span class="hidden sm:inline">بوابة الموكلين</span>
+          </button>
+
+          <button onclick="openSuperAdminModal()" title="إدارة التراخيص والاشتراكات"
+            class="px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-extrabold flex items-center gap-1.5 transition">
+            <span>👑</span>
+            <span class="hidden md:inline">التراخيص</span>
+          </button>
+
+          <button onclick="toggleSound()" id="ws-sound-btn" title="الصوت"
+            class="p-2.5 rounded-xl glass-card text-xs transition">
+            🔊
+          </button>
+
+          <button onclick="toggleTheme()" title="الوضع الليلي/النهاري"
+            class="p-2.5 rounded-xl glass-card text-xs transition">
+            <span class="theme-icon">☀️</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- جسم مساحة العمل -->
+    <div class="flex-1 flex relative max-w-[1600px] w-full mx-auto">
+
+      <!-- خلفية معتمة لقائمة الموبايل -->
+      <div id="mobile-drawer-overlay" onclick="toggleMobileDrawer()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 hidden lg:hidden"></div>
+
+      <!-- القائمة الجانبية -->
+      <aside id="workspace-sidebar"
+        class="fixed lg:sticky top-0 lg:top-[69px] right-0 z-50 lg:z-30 h-screen lg:h-[calc(100vh-69px)] w-[280px] shrink-0 glass-card border-l border-slate-200/60 dark:border-slate-800 flex flex-col justify-between p-4 transition-transform duration-300 translate-x-full lg:translate-x-0 overflow-y-auto">
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between lg:hidden pb-2 border-b border-slate-200 dark:border-slate-800">
+            <span class="font-black text-amber-500">أقسام النظام القانوني</span>
+            <button onclick="toggleMobileDrawer()" class="p-2 rounded-lg bg-slate-200 dark:bg-slate-800 text-xs">✕</button>
+          </div>
+
+          <nav class="space-y-1">
+            <button onclick="navigateModule('dashboard')" data-nav="dashboard" class="ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition text-right">
+              <span>📊</span><span>لوحة المعلومات والرول</span>
+            </button>
+            <button onclick="navigateModule('clients')" data-nav="clients" class="ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition text-right">
+              <span>👥</span><span>الموكلين والتوكيلات</span>
+            </button>
+            <button onclick="navigateModule('cases')" data-nav="cases" class="ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition text-right">
+              <span>📁</span><span>ملفات القضايا والخزينة</span>
+            </button>
+            <button onclick="navigateModule('hearings')" data-nav="hearings" class="ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition text-right">
+              <span>🗓️</span><span>أجندة الجلسات</span>
+            </button>
+            <button onclick="navigateModule('tasks')" data-nav="tasks" class="ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition text-right">
+              <span>✅</span><span>المهام الإدارية</span>
+            </button>
+            <button onclick="navigateModule('docgen')" data-nav="docgen" class="ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition text-right">
+              <span>🖨️</span><span>مولّد الحوافظ الرسمية</span>
+            </button>
+            <button onclick="navigateModule('deadlines')" data-nav="deadlines" class="ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition text-right">
+              <span>⏳</span><span>حاسبة المواعيد الحرجة</span>
+            </button>
+            <button onclick="navigateModule('financials')" data-nav="financials" class="ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition text-right">
+              <span>💰</span><span>الأتعاب والمصروفات</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- بطاقة الترخيص المحلي وبصمة الجهاز -->
+        <div class="mt-4 p-3.5 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 text-white border border-amber-500/30 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">الباقة المحلية:</span>
+            <span id="sb-plan-name" class="font-extrabold text-amber-400">PRO</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">بصمة الجهاز:</span>
+            <span id="sb-device-fp" class="font-mono text-[11px] text-slate-200">FP-0000</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">الأيام المتبقية:</span>
+            <span id="sb-days-left" class="font-mono font-bold text-emerald-400">365 يوم</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">حجم التخزين:</span>
+            <span id="sb-storage-used" class="font-mono text-[11px] text-sky-300">0.00 MB</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 pt-1">
+            <button onclick="openRenewLicenseModal()"
+              class="py-2 px-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px] transition">
+              🔑 تجديد الباقة
+            </button>
+            <button onclick="showAuthScreen()"
+              class="py-2 px-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-[11px] transition">
+              🚪 شاشة البداية
+            </button>
+          </div>
+          <div class="pt-2 border-t border-slate-800 text-center text-[10px] text-slate-400">
+            جميع الحقوق محفوظة © <span class="font-extrabold text-amber-400">عمرو ربيع</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- المحتوى الرئيسي -->
+      <main class="flex-1 min-w-0 p-3 sm:p-6 space-y-5">
+
+        <!-- تنبيه أمني: التلاعب بساعة الجهاز -->
+        <div id="clock-tamper-banner" class="hidden rounded-2xl p-4 sm:p-5 bg-rose-600/20 border-2 border-rose-500 backdrop-blur-md space-y-2">
+          <div class="flex items-center gap-2 text-rose-500 font-black text-base sm:text-lg">
+            <span>⏰🚨</span>
+            <span>تحذير أمني: تم اكتشاف إرجاع ساعة الجهاز للخلف</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+            اكتشف النظام أن تاريخ الجهاز الحالي أقدم من آخر جلسة عمل مسجلة في قاعدة البيانات المحلية. تم تفعيل <strong>وضع القراءة فقط الإجباري</strong> لحماية الترخيص. يرجى ضبط تاريخ ووقت الجهاز الصحيح ثم الضغط على "إعادة الفحص".
+          </p>
+          <button onclick="recheckSystemClock()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs">
+            🔄 إعادة فحص ساعة الجهاز الآن
+          </button>
+        </div>
+
+        <!-- تنبيه انتهاء الاشتراك: وضع القراءة فقط -->
+        <div id="expired-lock-banner" class="hidden rounded-2xl p-4 sm:p-5 bg-amber-500/15 border-2 border-amber-500/70 backdrop-blur-md">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-black text-base">
+                <span>🔒</span>
+                <span>انتهى الاشتراك — الحساب في وضع "القراءة فقط (Read-Only Mode)"</span>
+              </div>
+              <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                كافة قضاياك وتوكيلاتك ومستنداتك محفوظة بأمان على جهازك ويمكنك تصفحها وتصديرها بحرية، بينما تم إيقاف الإضافة والتعديل لحين إدخال كود التجديد.
+              </p>
+            </div>
+            <button onclick="openRenewLicenseModal()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shrink-0 shadow">
+              🔑 إدخال كود التجديد الآن
+            </button>
+          </div>
+        </div>
+
+        <!-- حاوية عرض الوحدة النشطة -->
+        <div id="module-viewport" class="space-y-5"></div>
+
+        <!-- تذييل الحقوق داخل مساحة العمل -->
+        <footer class="pt-4 pb-2 border-t border-slate-200/60 dark:border-slate-800/80 text-center text-[11px] text-slate-500 dark:text-slate-400">
+          ميزان برو (Mizan Pro) — جميع الحقوق محفوظة © 2026 | تطوير وبرمجة: <strong class="text-amber-500">عمرو ربيع (Amr Rabie)</strong>
+        </footer>
+      </main>
+    </div>
+  </div>
+
+  <!-- حاوية النوافذ المنبثقة -->
+  <div id="modal-root"></div>
+
+  <script>
+    /* =========================================================================
+       1. محرك التشفير والتوقيع الرقمي الأوفلاين (Pure-JS SHA-256 & Stream Cipher)
+       ========================================================================= */
+    const CryptoEngine = (() => {
+      const K = [
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+      ];
+
+      function rightRotate(value, amount) {
+        return (value >>> amount) | (value << (32 - amount));
+      }
+
+      function sha256Bytes(bytes) {
+        const H = [
+          0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+          0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+        ];
+
+        const bitLen = bytes.length * 8;
+        const paddedLen = Math.ceil((bytes.length + 9) / 64) * 64;
+        const padded = new Uint8Array(paddedLen);
+        padded.set(bytes);
+        padded[bytes.length] = 0x80;
+
+        const view = new DataView(padded.buffer);
+        view.setUint32(paddedLen - 8, Math.floor(bitLen / 0x100000000), false);
+        view.setUint32(paddedLen - 4, bitLen >>> 0, false);
+
+        const w = new Uint32Array(64);
+        for (let offset = 0; offset < paddedLen; offset += 64) {
+          for (let i = 0; i < 16; i++) {
+            w[i] = view.getUint32(offset + i * 4, false);
+          }
+          for (let i = 16; i < 64; i++) {
+            const s0 = rightRotate(w[i - 15], 7) ^ rightRotate(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+            const s1 = rightRotate(w[i - 2], 17) ^ rightRotate(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+            w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+          }
+
+          let [a, b, c, d, e, f, g, h] = H;
+          for (let i = 0; i < 64; i++) {
+            const S1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+            const ch = (e & f) ^ (~e & g);
+            const temp1 = (h + S1 + ch + K[i] + w[i]) >>> 0;
+            const S0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+            const maj = (a & b) ^ (a & c) ^ (b & c);
+            const temp2 = (S0 + maj) >>> 0;
+
+            h = g; g = f; f = e;
+            e = (d + temp1) >>> 0;
+            d = c; c = b; b = a;
+            a = (temp1 + temp2) >>> 0;
+          }
+
+          H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0;
+          H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+          H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0;
+          H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+        }
+
+        const out = new Uint8Array(32);
+        const outView = new DataView(out.buffer);
+        for (let i = 0; i < 8; i++) outView.setUint32(i * 4, H[i], false);
+        return out;
+      }
+
+      function sha256Hex(str) {
+        const encoder = new TextEncoder();
+        const digest = sha256Bytes(encoder.encode(str));
+        return Array.from(digest).map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      function encryptBackup(plainJsonStr, password) {
+        const encoder = new TextEncoder();
+        const plainBytes = encoder.encode(plainJsonStr);
+        const salt = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const hmac = sha256Hex(`${salt}|${password}|${plainJsonStr}`);
+
+        const cipherBytes = new Uint8Array(plainBytes.length);
+        let keyBlock = new Uint8Array(0);
+        for (let i = 0; i < plainBytes.length; i++) {
+          if (i % 32 === 0) {
+            const blockIndex = Math.floor(i / 32);
+            keyBlock = sha256Bytes(encoder.encode(`${password}:${salt}:${blockIndex}`));
+          }
+          cipherBytes[i] = plainBytes[i] ^ keyBlock[i % 32];
+        }
+
+        let binary = '';
+        const chunkSize = 0x8000;
+        for (let i = 0; i < cipherBytes.length; i += chunkSize) {
+          binary += String.fromCharCode.apply(null, cipherBytes.subarray(i, i + chunkSize));
+        }
+
+        return JSON.stringify({
+          format: 'MIZAN_PRO_ENCRYPTED_BACKUP',
+          version: 3,
+          createdAt: new Date().toISOString(),
+          salt,
+          hmac,
+          data: btoa(binary)
+        });
+      }
+
+      function decryptBackup(encryptedEnvelopeStr, password) {
+        const envelope = JSON.parse(encryptedEnvelopeStr);
+        if (!envelope || envelope.format !== 'MIZAN_PRO_ENCRYPTED_BACKUP' || !envelope.data) {
+          throw new Error('صيغة ملف النسخة الاحتياطية غير صالحة');
+        }
+
+        const binary = atob(envelope.data);
+        const cipherBytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          cipherBytes[i] = binary.charCodeAt(i);
+        }
+
+        const encoder = new TextEncoder();
+        const plainBytes = new Uint8Array(cipherBytes.length);
+        let keyBlock = new Uint8Array(0);
+        for (let i = 0; i < cipherBytes.length; i++) {
+          if (i % 32 === 0) {
+            const blockIndex = Math.floor(i / 32);
+            keyBlock = sha256Bytes(encoder.encode(`${password}:${envelope.salt}:${blockIndex}`));
+          }
+          plainBytes[i] = cipherBytes[i] ^ keyBlock[i % 32];
+        }
+
+        const decoder = new TextDecoder();
+        const plainJsonStr = decoder.decode(plainBytes);
+        const checkHmac = sha256Hex(`${envelope.salt}|${password}|${plainJsonStr}`);
+        if (checkHmac !== envelope.hmac) {
+          throw new Error('كلمة مرور فك التشفير غير صحيحة أو الملف تالف');
+        }
+        return JSON.parse(plainJsonStr);
+      }
+
+      function encodeUtf8Base64(str) {
+        const bytes = new TextEncoder().encode(str);
+        let bin = '';
+        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      }
+
+      function decodeUtf8Base64(b64url) {
+        let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new TextDecoder().decode(bytes);
+      }
+
+      return { sha256Hex, encryptBackup, decryptBackup, encodeUtf8Base64, decodeUtf8Base64 };
+    })();
+
+    /* =========================================================================
+       2. نظام التراخيص الأوفلاين وبصمة الجهاز والتحقق من الإدارة
+       ========================================================================= */
+    const MASTER_LICENSE_SECRET = 'MIZAN-PRO-EGYPT-OFFLINE-SAAS-KEY-2026';
+
+    // التحقق من كلمة مرور الإدارة دون تخزينها كنص صريح في الواجهة أو الكود
+    function verifyAdminPasscode(rawInput) {
+      if (!rawInput || typeof rawInput !== 'string') return false;
+      const trimmed = rawInput.trim();
+      const targetCodes = [97, 50, 48];
+      if (trimmed.length !== targetCodes.length) return false;
+      return targetCodes.every((code, idx) => trimmed.charCodeAt(idx) === code);
+    }
+
+    const TIERS_META = {
+      BASIC: {
+        code: 'BASIC',
+        label: 'باقة المحامي الفردي (Basic)',
+        devices: 'جهاز واحد (1)',
+        docGen: false,
+        deadlines: false,
+        backup: false
+      },
+      PRO: {
+        code: 'PRO',
+        label: 'باقة المكتب المتكامل (Pro)',
+        devices: 'حتى 3 أجهزة',
+        docGen: true,
+        deadlines: true,
+        backup: true
+      },
+      ENTERPRISE: {
+        code: 'ENTERPRISE',
+        label: 'باقة المؤسسات القانونية (Enterprise)',
+        devices: 'عدد أجهزة غير محدود',
+        docGen: true,
+        deadlines: true,
+        backup: true
+      }
+    };
+
+    function generateSignedLicenseKey(tier = 'PRO', days = 365) {
+      const cleanTier = TIERS_META[tier] ? tier : 'PRO';
+      const cleanDays = Math.max(1, parseInt(days, 10) || 365);
+      const nonce = Math.floor(0x1000 + Math.random() * 0xefff).toString(16).toUpperCase();
+      const sig = CryptoEngine.sha256Hex(`${cleanTier}|${cleanDays}|${nonce}|${MASTER_LICENSE_SECRET}`).slice(0, 6).toUpperCase();
+      return `MZ-${cleanTier}-${cleanDays}-${nonce}-${sig}`;
+    }
+
+    function verifySignedLicenseKey(rawKey) {
+      if (!rawKey || typeof rawKey !== 'string') return { valid: false, reason: 'يرجى إدخال كود التفعيل' };
+      const parts = rawKey.trim().toUpperCase().split('-');
+      if (parts.length !== 5 || parts[0] !== 'MZ') {
+        return { valid: false, reason: 'صيغة الكود غير صحيحة (يجب أن يبدأ بـ MZ-)' };
+      }
+      const [, tier, daysStr, nonce, sig] = parts;
+      if (!TIERS_META[tier]) {
+        return { valid: false, reason: 'نوع الباقة داخل الكود غير معروف' };
+      }
+      const days = parseInt(daysStr, 10);
+      if (isNaN(days) || days <= 0) {
+        return { valid: false, reason: 'مدة الاشتراك داخل الكود غير صالحة' };
+      }
+      const expectedSig = CryptoEngine.sha256Hex(`${tier}|${days}|${nonce}|${MASTER_LICENSE_SECRET}`).slice(0, 6).toUpperCase();
+      if (sig !== expectedSig) {
+        return { valid: false, reason: 'التوقيع الرقمي لكود التفعيل غير صحيح! الكود مزيف أو معدل.' };
+      }
+      return {
+        valid: true,
+        key: parts.join('-'),
+        tier,
+        days,
+        nonce
+      };
+    }
+
+    function computeDeviceFingerprint(salt) {
+      let canvasSig = 'no-canvas';
+      try {
+        const c = document.createElement('canvas');
+        const ctx = c.getContext('2d');
+        if (ctx) {
+          ctx.textBaseline = 'top';
+          ctx.font = '14px Arial';
+          ctx.fillText('MizanPro-FP-2026', 2, 2);
+          canvasSig = c.toDataURL().slice(-32);
+        }
+      } catch (e) {}
+
+      const raw = [
+        navigator.userAgent || '',
+        navigator.language || '',
+        `${screen.width}x${screen.height}x${screen.colorDepth}`,
+        Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+        navigator.hardwareConcurrency || 2,
+        canvasSig,
+        salt
+      ].join('|');
+
+      return 'FP-' + CryptoEngine.sha256Hex(raw).slice(0, 8).toUpperCase();
+    }
+
+    // استرجاع أحدث جلسة أو تحديث مسجل للدعوى مرتباً من الأحدث للأقدم
+    function getLatestHearingForCase(caseId) {
+      const list = State.hearings.filter(h => h.caseId === caseId);
+      if (list.length === 0) return null;
+      return list.slice().sort((a, b) => {
+        const dateCmp = String(b.date || '').localeCompare(String(a.date || ''));
+        if (dateCmp !== 0) return dateCmp;
+        return String(b.id || '').localeCompare(String(a.id || ''));
+      })[0];
+    }
+
+    // توليد رمز حالة محمول وموقّع للموكل يمكن فتحه على أي جهاز آخر بدون سيرفر
+    function buildSignedClientStatusToken(cs) {
+      const cl = State.clients.find(c => c.id === cs.clientId);
+      const latest = getLatestHearingForCase(cs.id);
+      const payload = {
+        office: State.officeInfo ? State.officeInfo.officeName : 'مكتب محاماة',
+        trk: cs.trackingCode,
+        num: `${cs.caseNumber}/${cs.caseYear}`,
+        court: `${cs.court} - ${cs.circuit}`,
+        client: cl ? cl.name : 'موكل',
+        status: cs.status,
+        lastDate: latest ? latest.date : '',
+        lastDec: latest ? latest.decision : 'تم قيد الدعوى وجارٍ متابعة الجلسات.',
+        nextDate: latest ? latest.nextDate : 'يُحدد لاحقاً'
+      };
+      const encoded = CryptoEngine.encodeUtf8Base64(JSON.stringify(payload));
+      const sig = CryptoEngine.sha256Hex(`${encoded}|${MASTER_LICENSE_SECRET}`).slice(0, 8).toUpperCase();
+      return `MIZAN-STATUS-${encoded}.${sig}`;
+    }
+
+    // بناء الرابط المباشر لبوابة استعلام الموكل متضمناً أحدث حالة موقّعة
+    function buildClientDirectPortalUrl(cs) {
+      const baseUrl = window.location.href.split('?')[0].split('#')[0];
+      const token = buildSignedClientStatusToken(cs);
+      return `${baseUrl}?track=${encodeURIComponent(token)}`;
+    }
+
+    /* =========================================================================
+       3. محرك قاعدة البيانات المحلية IndexedDB (MizanProDB)
+       ========================================================================= */
+    const DB_NAME = 'MizanProDB';
+    const DB_VERSION = 3;
+    const ALL_STORES = ['meta', 'clients', 'poas', 'cases', 'hearings', 'tasks', 'documents', 'deadlines', 'finance', 'auditLog'];
+
+    const MizanDB = {
+      db: null,
+
+      open() {
+        return new Promise((resolve, reject) => {
+          if (this.db) return resolve(this.db);
+          const req = indexedDB.open(DB_NAME, DB_VERSION);
+
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            ALL_STORES.forEach(storeName => {
+              if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName, { keyPath: storeName === 'meta' ? 'key' : 'id' });
+              }
+            });
+          };
+
+          req.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(this.db);
+          };
+
+          req.onerror = (e) => reject(e.target.error);
+        });
+      },
+
+      async getAll(storeName) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(storeName, 'readonly');
+          const req = tx.objectStore(storeName).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      },
+
+      async getMeta(key) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('meta', 'readonly');
+          const req = tx.objectStore('meta').get(key);
+          req.onsuccess = () => resolve(req.result ? req.result.value : null);
+          req.onerror = () => reject(req.error);
+        });
+      },
+
+      async setMeta(key, value) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('meta', 'readwrite');
+          tx.objectStore('meta').put({ key, value });
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      },
+
+      async put(storeName, record) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(storeName, 'readwrite');
+          tx.objectStore(storeName).put(record);
+          tx.oncomplete = () => resolve(record);
+          tx.onerror = () => reject(tx.error);
+        });
+      },
+
+      async delete(storeName, id) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(storeName, 'readwrite');
+          tx.objectStore(storeName).delete(id);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      },
+
+      async clearAllDataStores() {
+        const db = await this.open();
+        const dataStores = ALL_STORES.filter(s => s !== 'meta');
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(dataStores, 'readwrite');
+          dataStores.forEach(s => tx.objectStore(s).clear());
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      },
+
+      async estimateStorageMB() {
+        let totalBytes = 0;
+        for (const s of ALL_STORES) {
+          const rows = await this.getAll(s);
+          totalBytes += new Blob([JSON.stringify(rows)]).size;
+        }
+        return (totalBytes / (1024 * 1024)).toFixed(2);
+      }
+    };
+
+    /* =========================================================================
+       4. محرك المؤثرات الصوتية الخفيفة (Web Audio API)
+       ========================================================================= */
+    const SoundFX = {
+      enabled: true,
+      ctx: null,
+      play(type = 'click') {
+        if (!this.enabled) return;
+        try {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+          }
+          if (!this.ctx) return;
+          if (this.ctx.state === 'suspended') this.ctx.resume();
+
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          const now = this.ctx.currentTime;
+          if (type === 'success') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.08);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+            osc.start(now);
+            osc.stop(now + 0.25);
+          } else if (type === 'error') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(190, now);
+            osc.frequency.setValueAtTime(150, now + 0.1);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+            osc.start(now);
+            osc.stop(now + 0.25);
+          } else {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(620, now);
+            gain.gain.setValueAtTime(0.04, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+            osc.start(now);
+            osc.stop(now + 0.08);
+          }
+        } catch (e) {}
+      }
+    };
+
+    /* =========================================================================
+       5. الحالة المركزية للتطبيق (State) ووظائف المساعدة
+       ========================================================================= */
+    const State = {
+      deviceFp: 'FP-00000000',
+      officeInfo: null,
+      licenseInfo: null,
+      clockTampered: false,
+      currentRole: 'manager',
+      activeModule: 'dashboard',
+      caseFilter: 'الكل',
+      hearingFilter: 'الكل',
+      taskFilter: 'الكل',
+      clientSearch: '',
+      superAdminUnlocked: false,
+      generatedLicenses: [],
+      clients: [],
+      poas: [],
+      cases: [],
+      hearings: [],
+      tasks: [],
+      documents: [],
+      deadlines: [],
+      finance: [],
+      auditLog: []
+    };
+
+    function todayISO(offsetDays = 0) {
+      const d = new Date();
+      d.setDate(d.getDate() + offsetDays);
+      return d.toISOString().split('T')[0];
+    }
+
+    function formatCurrency(num) {
+      return Number(num || 0).toLocaleString('ar-EG') + ' ج.م';
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const colors = {
+        success: 'bg-emerald-600 text-white border-emerald-400',
+        error: 'bg-rose-600 text-white border-rose-400',
+        warning: 'bg-amber-500 text-slate-950 border-amber-300',
+        info: 'bg-slate-900 text-white border-amber-500/50'
+      };
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto px-4 py-3 rounded-2xl border shadow-xl text-xs font-extrabold flex items-center justify-between gap-3 transition-all duration-300 ${colors[type] || colors.info}`;
+      el.innerHTML = `<span>${msg}</span><button onclick="this.parentElement.remove()" class="opacity-75 hover:opacity-100">✕</button>`;
+      container.appendChild(el);
+      setTimeout(() => {
+        if (el.parentElement) el.remove();
+      }, 4200);
+    }
+
+    function copyToClipboard(text, label = 'النص') {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        SoundFX.play('success');
+        showToast(`تم نسخ ${label} بنجاح!`, 'success');
+      } catch (e) {
+        showToast('تعذر النسخ التلقائي، يرجى النسخ يدوياً.', 'warning');
+      }
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.classList.toggle('dark');
+      document.querySelectorAll('.theme-icon').forEach(ic => {
+        ic.textContent = isDark ? '☀️' : '🌙';
+      });
+      SoundFX.play('click');
+    }
+
+    function toggleSound() {
+      SoundFX.enabled = !SoundFX.enabled;
+      const icon = SoundFX.enabled ? '🔊' : '🔇';
+      ['auth-sound-btn', 'ws-sound-btn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.textContent = icon;
+      });
+      if (SoundFX.enabled) SoundFX.play('click');
+    }
+
+    function toggleMobileDrawer() {
+      const sb = document.getElementById('workspace-sidebar');
+      const ov = document.getElementById('mobile-drawer-overlay');
+      if (!sb || !ov) return;
+      const isHidden = sb.classList.contains('translate-x-full');
+      if (isHidden) {
+        sb.classList.remove('translate-x-full');
+        ov.classList.remove('hidden');
+      } else {
+        sb.classList.add('translate-x-full');
+        ov.classList.add('hidden');
+      }
+    }
+
+    function openModal(title, bodyHtml, maxWidthClass = 'max-w-xl') {
+      const root = document.getElementById('modal-root');
+      if (!root) return;
+      root.innerHTML = `
+        <div class="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
+          onclick="if(event.target===this) closeModal()">
+          <div class="glass-card rounded-3xl w-full ${maxWidthClass} p-5 sm:p-6 border border-amber-500/30 shadow-2xl my-auto space-y-4">
+            <div class="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 class="font-black text-base sm:text-lg text-amber-500">${title}</h3>
+              <button onclick="closeModal()" class="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-rose-500 hover:text-white text-xs font-black transition">✕</button>
+            </div>
+            <div>${bodyHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function closeModal() {
+      const root = document.getElementById('modal-root');
+      if (root) root.innerHTML = '';
+    }
+
+    /* =========================================================================
+       6. التهيئة الأولية وحماية ساعة الجهاز (Anti-Tamper Clock) والبيانات النموذجية
+       ========================================================================= */
+    async function initApp() {
+      await MizanDB.open();
+
+      // توليد أو استرجاع Salt الجهاز لحساب البصمة الثابتة
+      let salt = await MizanDB.getMeta('deviceSalt');
+      if (!salt) {
+        salt = Math.random().toString(36).substring(2, 12).toUpperCase();
+        await MizanDB.setMeta('deviceSalt', salt);
+      }
+      State.deviceFp = computeDeviceFingerprint(salt);
+      const authFpEl = document.getElementById('auth-device-fp');
+      if (authFpEl) authFpEl.textContent = State.deviceFp;
+
+      // فحص ساعة الجهاز لمنع التلاعب بالتاريخ
+      await checkSystemClockIntegrity();
+
+      // تحميل بيانات المكتب والترخيص والأكواد المولّدة
+      State.officeInfo = await MizanDB.getMeta('officeInfo');
+      State.licenseInfo = await MizanDB.getMeta('licenseInfo');
+      State.generatedLicenses = (await MizanDB.getMeta('generatedLicenses')) || [];
+
+      await reloadAllStoresFromDB();
+
+      if (State.officeInfo && State.licenseInfo) {
+        const banner = document.getElementById('existing-office-banner');
+        const title = document.getElementById('existing-office-title');
+        if (banner && title) {
+          title.textContent = `${State.officeInfo.officeName} (${State.licenseInfo.tier})`;
+          banner.classList.remove('hidden');
+        }
+        enterActiveWorkspace();
+      } else {
+        showAuthScreen();
+      }
+
+      // دعم الاستعلام المباشر عبر رابط URL مثل ?track=TRK-101 أو ?track=MIZAN-STATUS-...
+      const params = new URLSearchParams(window.location.search);
+      const trackParam = params.get('track');
+      if (trackParam) {
+        switchAuthTab('client');
+        const inlineInp = document.getElementById('inline-cp-input');
+        if (inlineInp) inlineInp.value = trackParam;
+        runClientInquiry('inline-cp-input', 'inline-cp-result');
+        openClientPortalModal(trackParam);
+      }
+
+      // فحص دوري لساعة الجهاز كل 25 ثانية
+      setInterval(checkSystemClockIntegrity, 25000);
+    }
+
+    async function checkSystemClockIntegrity() {
+      const now = Date.now();
+      const lastTs = await MizanDB.getMeta('lastKnownTimestamp');
+      if (lastTs && now < lastTs - 5 * 60 * 1000) {
+        State.clockTampered = true;
+      } else {
+        State.clockTampered = false;
+        await MizanDB.setMeta('lastKnownTimestamp', Math.max(now, lastTs || 0));
+      }
+      updateLockBanners();
+    }
+
+    async function recheckSystemClock() {
+      await checkSystemClockIntegrity();
+      if (!State.clockTampered) {
+        SoundFX.play('success');
+        showToast('تم التحقق من سلامة ساعة الجهاز وإلغاء القفل الأمني.', 'success');
+        renderWorkspace();
+      } else {
+        SoundFX.play('error');
+        showToast('تاريخ الجهاز ما زال متأخراً! يرجى ضبط التاريخ الصحيح.', 'error');
+      }
+    }
+
+    function getRemainingDays() {
+      if (!State.licenseInfo || !State.licenseInfo.expiresAt) return 0;
+      const diff = new Date(State.licenseInfo.expiresAt).getTime() - Date.now();
+      return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    }
+
+    function isSystemLocked() {
+      if (State.clockTampered) return true;
+      if (!State.licenseInfo) return true;
+      if (State.licenseInfo.manualReadOnlyLock) return true;
+      if (getRemainingDays() <= 0) return true;
+      return false;
+    }
+
+    function updateLockBanners() {
+      const tamperBanner = document.getElementById('clock-tamper-banner');
+      const expBanner = document.getElementById('expired-lock-banner');
+      if (tamperBanner) {
+        tamperBanner.classList.toggle('hidden', !State.clockTampered);
+      }
+      if (expBanner) {
+        const showExp = !State.clockTampered && Boolean(State.licenseInfo) && (State.licenseInfo.manualReadOnlyLock || getRemainingDays() <= 0);
+        expBanner.classList.toggle('hidden', !showExp);
+      }
+    }
+
+    async function assertCanWrite() {
+      await checkSystemClockIntegrity();
+      if (State.clockTampered) {
+        SoundFX.play('error');
+        showToast('تم إيقاف التعديل بسبب اكتشاف تغيير ساعة الجهاز للخلف!', 'error');
+        return false;
+      }
+      if (isSystemLocked()) {
+        SoundFX.play('error');
+        showToast('الحساب في وضع القراءة فقط! يرجى تجديد الاشتراك لمتابعة الإضافة والتعديل.', 'warning');
+        return false;
+      }
+      return true;
+    }
+
+    async function reloadAllStoresFromDB() {
+      State.clients = await MizanDB.getAll('clients');
+      State.poas = await MizanDB.getAll('poas');
+      State.cases = await MizanDB.getAll('cases');
+      State.hearings = await MizanDB.getAll('hearings');
+      State.tasks = await MizanDB.getAll('tasks');
+      State.documents = await MizanDB.getAll('documents');
+      State.deadlines = await MizanDB.getAll('deadlines');
+      State.finance = await MizanDB.getAll('finance');
+      State.auditLog = await MizanDB.getAll('auditLog');
+      await refreshStorageCounter();
+    }
+
+    async function refreshStorageCounter() {
+      const mb = await MizanDB.estimateStorageMB();
+      const pill = document.getElementById('header-storage-pill');
+      const sb = document.getElementById('sb-storage-used');
+      if (pill) pill.textContent = `${mb} MB`;
+      if (sb) sb.textContent = `${mb} MB`;
+    }
+
+    async function logAudit(caseId, action) {
+      const roleLabels = { manager: 'مدير المكتب', lawyer: 'محامي', secretary: 'إداري/سكرتارية' };
+      const actorName = State.officeInfo ? State.officeInfo.managerName : 'مستخدم النظام';
+      const entry = {
+        id: 'AUD-' + Date.now() + '-' + Math.floor(Math.random() * 999),
+        caseId: caseId || 'SYSTEM',
+        actor: actorName,
+        role: roleLabels[State.currentRole] || State.currentRole,
+        action,
+        timestamp: new Date().toLocaleString('ar-EG')
+      };
+      await MizanDB.put('auditLog', entry);
+      State.auditLog.unshift(entry);
+    }
+
+    /* =========================================================================
+       7. إدارة التنقل بين شاشة التفعيل ومساحة العمل وتبويبات الدخول
+       ========================================================================= */
+    function switchAuthTab(tab) {
+      const tabs = ['activate', 'restore', 'client'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`auth-tab-${t}`);
+        const panel = document.getElementById(`auth-panel-${t}`);
+        if (btn) {
+          if (t === tab) {
+            btn.className = 'py-2.5 px-3 rounded-xl text-xs font-extrabold bg-amber-500 text-slate-950 shadow transition';
+          } else {
+            btn.className = 'py-2.5 px-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 transition';
+          }
+        }
+        if (panel) {
+          panel.classList.toggle('hidden', t !== tab);
+        }
+      });
+      SoundFX.play('click');
+    }
+
+    function showAuthScreen() {
+      const authEl = document.getElementById('auth-screen');
+      const wsEl = document.getElementById('workspace-shell');
+      if (authEl) authEl.classList.remove('hidden');
+      if (wsEl) wsEl.classList.add('hidden');
+
+      const authFp = document.getElementById('auth-device-fp');
+      if (authFp) authFp.textContent = State.deviceFp;
+
+      const banner = document.getElementById('existing-office-banner');
+      const title = document.getElementById('existing-office-title');
+      if (banner && title) {
+        if (State.officeInfo && State.licenseInfo) {
+          title.textContent = `${State.officeInfo.officeName} (${State.licenseInfo.tier})`;
+          banner.classList.remove('hidden');
+        } else {
+          banner.classList.add('hidden');
+        }
+      }
+    }
+
+    function enterActiveWorkspace() {
+      if (!State.officeInfo || !State.licenseInfo) {
+        showAuthScreen();
+        return;
+      }
+      const authEl = document.getElementById('auth-screen');
+      const wsEl = document.getElementById('workspace-shell');
+      if (authEl) authEl.classList.add('hidden');
+      if (wsEl) wsEl.classList.remove('hidden');
+
+      updateWorkspaceChrome();
+      updateLockBanners();
+      renderWorkspace();
+    }
+
+    async function handleActivateNewOffice(e) {
+      e.preventDefault();
+      await checkSystemClockIntegrity();
+      if (State.clockTampered) {
+        SoundFX.play('error');
+        showToast('تعذر التفعيل بسبب اكتشاف إرجاع ساعة الجهاز للخلف!', 'error');
+        return;
+      }
+
+      const fd = new FormData(e.target);
+      const officeName = String(fd.get('officeName') || '').trim();
+      const managerName = String(fd.get('managerName') || '').trim();
+      const phone = String(fd.get('phone') || '').trim();
+      const rawKey = String(fd.get('licenseKey') || '').trim();
+
+      const check = verifySignedLicenseKey(rawKey);
+      if (!check.valid) {
+        SoundFX.play('error');
+        showToast(check.reason, 'error');
+        return;
+      }
+
+      const usedKeys = (await MizanDB.getMeta('usedLicenseKeys')) || [];
+      if (usedKeys.includes(check.key)) {
+        SoundFX.play('error');
+        showToast('هذا الكود تم استخدامه وتفعيله مسبقاً ولا يمكن إعادة استخدامه!', 'error');
+        return;
+      }
+
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + check.days * 24 * 60 * 60 * 1000).toISOString();
+
+      const officeInfo = {
+        officeId: 'OFF-' + Math.floor(1000 + Math.random() * 9000),
+        officeName,
+        managerName,
+        phone,
+        activatedAt: now.toISOString(),
+        boundFingerprint: State.deviceFp
+      };
+
+      const licenseInfo = {
+        key: check.key,
+        tier: check.tier,
+        days: check.days,
+        activatedAt: now.toISOString(),
+        expiresAt,
+        boundFingerprint: State.deviceFp,
+        manualReadOnlyLock: false
+      };
+
+      usedKeys.push(check.key);
+      await MizanDB.setMeta('usedLicenseKeys', usedKeys);
+      await MizanDB.setMeta('officeInfo', officeInfo);
+      await MizanDB.setMeta('licenseInfo', licenseInfo);
+      await MizanDB.setMeta('lastKnownTimestamp', Date.now());
+
+      State.officeInfo = officeInfo;
+      State.licenseInfo = licenseInfo;
+      State.currentRole = 'manager';
+      State.activeModule = 'dashboard';
+
+      await MizanDB.clearAllDataStores();
+      await logAudit('SYSTEM', `تفعيل مكتب "${officeName}" بباقة ${check.tier} وإنشاء قاعدة بيانات نظيفة`);
+      await reloadAllStoresFromDB();
+
+      SoundFX.play('success');
+      showToast(`تم تفعيل "${officeName}" بنجاح على باقة ${check.tier}!`, 'success');
+      enterActiveWorkspace();
+    }
+
+    async function handleRestoreBackupFromGate(e) {
+      e.preventDefault();
+      await checkSystemClockIntegrity();
+      if (State.clockTampered) {
+        SoundFX.play('error');
+        showToast('تعذر الاستعادة بسبب عدم انتظام ساعة الجهاز!', 'error');
+        return;
+      }
+
+      const fileInput = document.getElementById('gate-backup-file');
+      const password = document.getElementById('gate-backup-password')?.value || '';
+      if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        showToast('يرجى اختيار ملف النسخة الاحتياطية (.mizan).', 'warning');
+        return;
+      }
+
+      try {
+        const rawText = await fileInput.files[0].text();
+        const payload = CryptoEngine.decryptBackup(rawText, password);
+        await restoreBackupPayloadIntoDB(payload);
+        SoundFX.play('success');
+        showToast('تم فك التشفير واستعادة جميع بيانات المكتب بنجاح!', 'success');
+        enterActiveWorkspace();
+      } catch (err) {
+        SoundFX.play('error');
+        showToast(err.message || 'فشل فك تشفير ملف النسخة الاحتياطية.', 'error');
+      }
+    }
+
+    async function restoreBackupPayloadIntoDB(payload) {
+      if (!payload || typeof payload !== 'object') {
+        throw new Error('محتوى النسخة الاحتياطية غير صالح');
+      }
+
+      await MizanDB.clearAllDataStores();
+
+      if (payload.officeInfo) {
+        const restoredOffice = { ...payload.officeInfo, boundFingerprint: State.deviceFp };
+        await MizanDB.setMeta('officeInfo', restoredOffice);
+        State.officeInfo = restoredOffice;
+      }
+
+      if (payload.licenseInfo) {
+        const restoredLicense = { ...payload.licenseInfo, boundFingerprint: State.deviceFp };
+        await MizanDB.setMeta('licenseInfo', restoredLicense);
+        State.licenseInfo = restoredLicense;
+      }
+
+      const stores = ['clients', 'poas', 'cases', 'hearings', 'tasks', 'documents', 'deadlines', 'finance', 'auditLog'];
+      for (const storeName of stores) {
+        const rows = Array.isArray(payload[storeName]) ? payload[storeName] : [];
+        for (const row of rows) {
+          await MizanDB.put(storeName, row);
+        }
+      }
+
+      await MizanDB.setMeta('lastKnownTimestamp', Date.now());
+      await reloadAllStoresFromDB();
+    }
+
+    function updateWorkspaceChrome() {
+      if (!State.officeInfo || !State.licenseInfo) return;
+      const tier = State.licenseInfo.tier || 'PRO';
+      const daysLeft = getRemainingDays();
+
+      const officeTitle = document.getElementById('header-office-name');
+      const tierBadge = document.getElementById('header-tier-badge');
+      const sbPlan = document.getElementById('sb-plan-name');
+      const sbFp = document.getElementById('sb-device-fp');
+      const sbDays = document.getElementById('sb-days-left');
+      const roleSelect = document.getElementById('header-role-select');
+
+      if (officeTitle) officeTitle.textContent = State.officeInfo.officeName;
+      if (tierBadge) tierBadge.textContent = tier;
+      if (sbPlan) sbPlan.textContent = tier;
+      if (sbFp) sbFp.textContent = State.deviceFp;
+      if (sbDays) {
+        sbDays.textContent = daysLeft > 0 ? `${daysLeft} يوم` : 'منتهي';
+        sbDays.className = `font-mono font-bold ${daysLeft > 7 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+      if (roleSelect) roleSelect.value = State.currentRole;
+
+      document.querySelectorAll('.ws-nav-btn').forEach(btn => {
+        const isActive = btn.getAttribute('data-nav') === State.activeModule;
+        btn.className = isActive
+          ? 'ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition text-right bg-amber-500 text-slate-950 shadow'
+          : 'ws-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition text-right text-slate-700 dark:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800/70';
+      });
+    }
+
+    function switchUserRole(role) {
+      State.currentRole = role;
+      SoundFX.play('click');
+      const labels = {
+        manager: 'مدير المكتب',
+        lawyer: 'محامي',
+        secretary: 'إداري / سكرتارية'
+      };
+      showToast(`تم التبديل إلى صلاحية: ${labels[role] || role}`, 'info');
+      renderWorkspace();
+    }
+
+    function navigateModule(moduleName) {
+      State.activeModule = moduleName;
+      SoundFX.play('click');
+      const sb = document.getElementById('workspace-sidebar');
+      const ov = document.getElementById('mobile-drawer-overlay');
+      if (sb && !sb.classList.contains('translate-x-full') && window.innerWidth < 1024) {
+        sb.classList.add('translate-x-full');
+        if (ov) ov.classList.add('hidden');
+      }
+      updateWorkspaceChrome();
+      renderWorkspace();
+    }
+
+    function renderWorkspace() {
+      updateWorkspaceChrome();
+      updateLockBanners();
+      refreshStorageCounter();
+
+      const vp = document.getElementById('module-viewport');
+      if (!vp) return;
+
+      if (!State.officeInfo || !State.licenseInfo) {
+        showAuthScreen();
+        return;
+      }
+
+      switch (State.activeModule) {
+        case 'clients':
+          renderClientsModule(vp);
+          break;
+        case 'cases':
+          renderCasesModule(vp);
+          break;
+        case 'hearings':
+          renderHearingsModule(vp);
+          break;
+        case 'tasks':
+          renderTasksModule(vp);
+          break;
+        case 'docgen':
+          renderDocGenModule(vp);
+          break;
+        case 'deadlines':
+          renderDeadlinesModule(vp);
+          break;
+        case 'financials':
+          renderFinancialsModule(vp);
+          break;
+        case 'dashboard':
+        default:
+          renderDashboardModule(vp);
+          break;
+      }
+    }
+
+    function openRenewLicenseModal() {
+      openModal('🔑 تجديد أو ترقية اشتراك المكتب', `
+        <form onsubmit="submitRenewLicense(event)" class="space-y-4 text-xs sm:text-sm">
+          <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs">
+            <strong>الباقة الحالية:</strong> ${State.licenseInfo ? State.licenseInfo.tier : '—'} |
+            <strong>الأيام المتبقية:</strong> <span class="font-mono font-bold text-emerald-500">${getRemainingDays()} يوم</span>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">كود التفعيل أو التجديد الجديد *</label>
+            <input name="renewKey" required placeholder="MZ-PRO-365-XXXX-XXXXXX"
+              class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-amber-500/50 font-mono font-extrabold text-center uppercase" />
+          </div>
+          <div class="flex justify-end gap-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">تفعيل التجديد الآن</button>
+          </div>
+        </form>
+      `, 'max-w-md');
+    }
+
+    async function submitRenewLicense(e) {
+      e.preventDefault();
+      await checkSystemClockIntegrity();
+      if (State.clockTampered) {
+        SoundFX.play('error');
+        showToast('تعذر التجديد بسبب عدم انتظام ساعة الجهاز!', 'error');
+        return;
+      }
+
+      const fd = new FormData(e.target);
+      const check = verifySignedLicenseKey(String(fd.get('renewKey') || '').trim());
+      if (!check.valid) {
+        SoundFX.play('error');
+        showToast(check.reason, 'error');
+        return;
+      }
+
+      const usedKeys = (await MizanDB.getMeta('usedLicenseKeys')) || [];
+      if (usedKeys.includes(check.key)) {
+        SoundFX.play('error');
+        showToast('تم استخدام كود التفعيل هذا مسبقاً!', 'error');
+        return;
+      }
+
+      const baseTime = Math.max(Date.now(), State.licenseInfo && State.licenseInfo.expiresAt ? new Date(State.licenseInfo.expiresAt).getTime() : Date.now());
+      const newExpiresAt = new Date(baseTime + check.days * 24 * 60 * 60 * 1000).toISOString();
+
+      State.licenseInfo = {
+        key: check.key,
+        tier: check.tier,
+        days: check.days,
+        activatedAt: new Date().toISOString(),
+        expiresAt: newExpiresAt,
+        boundFingerprint: State.deviceFp,
+        manualReadOnlyLock: false
+      };
+
+      usedKeys.push(check.key);
+      await MizanDB.setMeta('usedLicenseKeys', usedKeys);
+      await MizanDB.setMeta('licenseInfo', State.licenseInfo);
+      await logAudit('LICENSE', `تجديد/ترقية الاشتراك إلى باقة ${check.tier} لمدة ${check.days} يوم`);
+
+      closeModal();
+      SoundFX.play('success');
+      showToast(`تم تجديد الاشتراك بنجاح إلى باقة ${check.tier}!`, 'success');
+      renderWorkspace();
+    }
+
+    /* =========================================================================
+       8. الوحدات القانونية الثمانية الكاملة
+       ========================================================================= */
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function previewStoredAttachment(kind, id) {
+      let item = null;
+      if (kind === 'doc') item = State.documents.find(d => d.id === id);
+      else if (kind === 'poa') item = State.poas.find(p => p.id === id);
+
+      if (!item || !item.dataUrl) {
+        showToast('لا يوجد ملف مرفق قابل للمعاينة.', 'warning');
+        return;
+      }
+
+      const isPdf = (item.mimeType || '').includes('pdf') || (item.fileName || '').toLowerCase().endsWith('.pdf');
+      const title = item.title || item.poaNumber || 'معاينة المرفق';
+      openModal(`👁️ معاينة: ${title}`, `
+        <div class="space-y-3">
+          <div class="max-h-[70vh] overflow-auto rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-950 flex items-center justify-center p-2">
+            ${isPdf
+              ? `<iframe src="${item.dataUrl}" class="w-full h-[65vh] rounded-xl bg-white"></iframe>`
+              : `<img src="${item.dataUrl}" alt="${title}" class="max-w-full max-h-[65vh] object-contain rounded-xl" />`
+            }
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-400 font-mono">${item.fileName || 'attachment'}</span>
+            <a href="${item.dataUrl}" download="${item.fileName || 'mizan-file'}" class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold">⬇️ تحميل الملف</a>
+          </div>
+        </div>
+      `, 'max-w-3xl');
+    }
+
+    /* -------------------------------------------------------------------------
+       الوحدة 1: لوحة المعلومات والرول اليومي
+       ------------------------------------------------------------------------- */
+    function renderDashboardModule(vp) {
+      const today = todayISO(0);
+      const todayHearings = State.hearings.filter(h => h.date === today);
+      const pendingTasks = State.tasks.filter(t => t.status !== 'مكتملة');
+      const activeCases = State.cases.filter(c => c.status !== 'منتهية / صدر حكم');
+      const urgentDeadlines = State.deadlines.filter(d => {
+        const diff = Math.ceil((new Date(d.deadlineDate) - new Date(today)) / (1000 * 60 * 60 * 24));
+        return diff >= 0 && diff <= 7;
+      });
+
+      const isManager = State.currentRole === 'manager';
+      const totalFeesAgreed = State.finance.filter(f => f.kind === 'fee').reduce((s, f) => s + Number(f.agreed || 0), 0);
+      const totalFeesPaid = State.finance.filter(f => f.kind === 'fee').reduce((s, f) => s + Number(f.paid || 0), 0);
+
+      vp.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">📊 لوحة المعلومات والرول اليومي</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">تاريخ اليوم: <strong class="font-mono text-amber-500">${today}</strong> — نظرة شاملة على أعمال المكتب</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="navigateModule('cases'); setTimeout(openNewCaseModal, 60);" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow">
+              + قضية جديدة
+            </button>
+            <button onclick="navigateModule('hearings'); setTimeout(openNewHearingModal, 60);" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow">
+              + تسجيل جلسة
+            </button>
+          </div>
+        </div>
+
+        <!-- بطاقات الإحصائيات -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div class="glass-card rounded-2xl p-4 border-r-4 border-amber-500">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">القضايا المتداولة</span>
+            <p class="text-2xl sm:text-3xl font-black mt-1 text-amber-500">${activeCases.length}</p>
+            <span class="text-[11px] text-slate-400">إجمالي القضايا: ${State.cases.length}</span>
+          </div>
+          <div class="glass-card rounded-2xl p-4 border-r-4 border-emerald-500">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">رول جلسات اليوم</span>
+            <p class="text-2xl sm:text-3xl font-black mt-1 text-emerald-500">${todayHearings.length}</p>
+            <span class="text-[11px] text-slate-400">إجمالي الجلسات: ${State.hearings.length}</span>
+          </div>
+          <div class="glass-card rounded-2xl p-4 border-r-4 border-sky-500">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">الموكلين والتوكيلات</span>
+            <p class="text-2xl sm:text-3xl font-black mt-1 text-sky-500">${State.clients.length}</p>
+            <span class="text-[11px] text-slate-400">التوكيلات السارية: ${State.poas.filter(p => p.status === 'ساري').length}</span>
+          </div>
+          <div class="glass-card rounded-2xl p-4 border-r-4 border-rose-500">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400">مهام معلقة / مواعيد حرجة</span>
+            <p class="text-2xl sm:text-3xl font-black mt-1 text-rose-500">${pendingTasks.length} / ${urgentDeadlines.length}</p>
+            <span class="text-[11px] text-slate-400">تحتاج متابعة فورية</span>
+          </div>
+        </div>
+
+        ${isManager ? `
+          <div class="glass-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 border border-emerald-500/30">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">💼</span>
+              <div>
+                <span class="block text-xs text-slate-400">ملخص الأتعاب (صلاحية مدير المكتب فقط)</span>
+                <strong class="text-sm sm:text-base font-black text-emerald-500">المحصّل: ${formatCurrency(totalFeesPaid)} من أصل ${formatCurrency(totalFeesAgreed)}</strong>
+              </div>
+            </div>
+            <button onclick="navigateModule('financials')" class="px-4 py-2 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-extrabold">
+              التفاصيل المالية ←
+            </button>
+          </div>
+        ` : ''}
+
+        <!-- رول جلسات اليوم + المهام العاجلة -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-black text-sm sm:text-base text-amber-500">⚖️ رول جلسات اليوم (${today})</h3>
+              <button onclick="navigateModule('hearings')" class="text-xs font-bold text-sky-400 hover:underline">كل الجلسات</button>
+            </div>
+            ${todayHearings.length === 0 ? `
+              <div class="p-6 text-center rounded-2xl bg-slate-100/60 dark:bg-slate-900/60 text-xs text-slate-400">
+                لا توجد جلسات مسجلة بتاريخ اليوم.
+              </div>
+            ` : `
+              <div class="space-y-2.5">
+                ${todayHearings.map(h => {
+                  const cs = State.cases.find(c => c.id === h.caseId);
+                  return `
+                    <div class="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1 text-xs">
+                      <div class="flex items-center justify-between">
+                        <strong class="text-amber-500">${cs ? `دعوى ${cs.caseNumber}/${cs.caseYear} (${cs.court})` : 'دعوى'}</strong>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold">${h.nextDate ? `القادمة: ${h.nextDate}` : 'جلسة اليوم'}</span>
+                      </div>
+                      <p class="text-slate-600 dark:text-slate-300"><strong>القرار:</strong> ${h.decision || '—'}</p>
+                      ${h.requiredAction ? `<p class="text-rose-400"><strong>المطلوب:</strong> ${h.requiredAction}</p>` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+
+          <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-black text-sm sm:text-base text-sky-400">✅ المهام الإدارية الجارية</h3>
+              <button onclick="navigateModule('tasks')" class="text-xs font-bold text-sky-400 hover:underline">إدارة المهام</button>
+            </div>
+            ${pendingTasks.length === 0 ? `
+              <div class="p-6 text-center rounded-2xl bg-slate-100/60 dark:bg-slate-900/60 text-xs text-slate-400">
+                جميع المهام الإدارية منجزة حالياً.
+              </div>
+            ` : `
+              <div class="space-y-2.5">
+                ${pendingTasks.slice(0, 5).map(t => `
+                  <div class="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+                    <div>
+                      <strong class="block text-slate-800 dark:text-white">${t.title}</strong>
+                      <span class="text-slate-400">المكلّف: ${t.assignee || 'غير محدد'} | الموعد: ${t.dueDate || '—'}</span>
+                    </div>
+                    <button onclick="toggleTaskDone('${t.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shrink-0">
+                      إنجاز ✓
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    /* -------------------------------------------------------------------------
+       الوحدة 2: إدارة الموكلين والتوكيلات
+       ------------------------------------------------------------------------- */
+    function renderClientsModule(vp) {
+      const q = (State.clientSearch || '').trim().toLowerCase();
+      const filteredClients = State.clients.filter(c =>
+        !q ||
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.nationalId || '').includes(q) ||
+        (c.phone || '').includes(q)
+      );
+
+      vp.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black">👥 الموكلين وسجل التوكيلات</h2>
+            <p class="text-xs text-slate-400">إدارة بيانات الموكلين، أرقام التوكيلات، والصور الضوئية للتوكيلات</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="openNewClientModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow">
+              + إضافة موكل جديد
+            </button>
+            <button onclick="openNewPoaModal()" class="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs shadow">
+              + إضافة توكيل
+            </button>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-3">
+          <input value="${State.clientSearch}" oninput="State.clientSearch=this.value; renderWorkspace();"
+            placeholder="🔍 ابحث بالاسم أو الرقم القومي أو رقم الهاتف..."
+            class="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm focus:outline-none focus:border-amber-500" />
+        </div>
+
+        <!-- قائمة الموكلين -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          ${filteredClients.length === 0 ? `
+            <div class="md:col-span-2 glass-card rounded-2xl p-8 text-center text-xs sm:text-sm text-slate-400">
+              لا يوجد موكلون مسجلون حالياً. اضغط على "+ إضافة موكل جديد" للبدء.
+            </div>
+          ` : filteredClients.map(cl => {
+            const clientPoas = State.poas.filter(p => p.clientId === cl.id);
+            const clientCases = State.cases.filter(c => c.clientId === cl.id);
+            return `
+              <div class="glass-card rounded-2xl p-4 space-y-3 border border-slate-200/60 dark:border-slate-800">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h3 class="font-black text-base text-amber-500">${cl.name}</h3>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-400">${cl.roleType || 'موكل'}</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1 font-mono">📱 ${cl.phone || '—'} | 🪪 ${cl.nationalId || '—'}</p>
+                    ${cl.address ? `<p class="text-xs text-slate-500 mt-0.5">📍 ${cl.address}</p>` : ''}
+                  </div>
+                  <button onclick="deleteClientRecord('${cl.id}')" title="حذف الموكل"
+                    class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-500 hover:text-white text-xs font-bold transition">
+                    🗑️ حذف
+                  </button>
+                </div>
+
+                <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-2 text-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-400">التوكيلات (${clientPoas.length}) | القضايا (${clientCases.length})</span>
+                    <button onclick="openNewPoaModal('${cl.id}')" class="text-amber-500 font-bold hover:underline">+ توكيل للموكل</button>
+                  </div>
+                  ${clientPoas.map(p => `
+                    <div class="p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 flex items-center justify-between gap-2">
+                      <div>
+                        <strong class="font-mono text-emerald-400">توكيل ${p.poaNumber} (${p.poaYear})</strong>
+                        <span class="block text-[11px] text-slate-400">${p.officeName} — ${p.poaType} (${p.status})</span>
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        ${p.dataUrl ? `<button onclick="previewStoredAttachment('poa', '${p.id}')" class="px-2.5 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-bold">👁️ صورة</button>` : ''}
+                        <button onclick="deletePoaRecord('${p.id}')" class="px-2 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-600 text-rose-500 hover:text-white text-[11px] font-bold">🗑️</button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function openNewClientModal() {
+      openModal('👤 إضافة موكل جديد', `
+        <form onsubmit="submitNewClient(event)" class="space-y-3 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold mb-1">اسم الموكل بالكامل *</label>
+            <input name="name" required placeholder="الاسم الرباعي للموكل أو اسم الشركة"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">الرقم القومي / السجل التجاري</label>
+              <input name="nationalId" placeholder="14 رقم"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">رقم الهاتف (واتساب) *</label>
+              <input name="phone" required placeholder="010xxxxxxxx"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono" />
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">الصفة القانونية</label>
+              <select name="roleType" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                <option value="مدعي">مدعي</option>
+                <option value="مدعى عليه">مدعى عليه</option>
+                <option value="مجني عليه">مجني عليه</option>
+                <option value="متهم">متهم</option>
+                <option value="طاعن">طاعن</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold mb-1">العنوان</label>
+              <input name="address" placeholder="المدينة / الحي / الشارع"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">حفظ الموكل</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function submitNewClient(e) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const fd = new FormData(e.target);
+      const client = {
+        id: 'CL-' + Date.now(),
+        name: String(fd.get('name') || '').trim(),
+        nationalId: String(fd.get('nationalId') || '').trim(),
+        phone: String(fd.get('phone') || '').trim(),
+        roleType: fd.get('roleType'),
+        address: String(fd.get('address') || '').trim(),
+        createdAt: todayISO(0)
+      };
+      await MizanDB.put('clients', client);
+      await logAudit(client.id, `إضافة موكل جديد: ${client.name}`);
+      await reloadAllStoresFromDB();
+      closeModal();
+      SoundFX.play('success');
+      showToast('تم حفظ بيانات الموكل بنجاح!', 'success');
+      renderWorkspace();
+    }
+
+    async function deleteClientRecord(clientId) {
+      if (!(await assertCanWrite())) return;
+      const cl = State.clients.find(c => c.id === clientId);
+      if (!cl) return;
+      openModal('⚠️ تأكيد حذف الموكل', `
+        <div class="space-y-4 text-xs sm:text-sm">
+          <p>هل أنت متأكد من حذف الموكل <strong>${cl.name}</strong> من قاعدة البيانات؟</p>
+          <div class="flex justify-end gap-2">
+            <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button onclick="confirmDeleteClient('${clientId}')" class="px-4 py-2 rounded-xl bg-rose-600 text-white font-extrabold text-xs">🗑️ نعم، احذف</button>
+          </div>
+        </div>
+      `, 'max-w-md');
+    }
+
+    async function confirmDeleteClient(clientId) {
+      if (!(await assertCanWrite())) return;
+      await MizanDB.delete('clients', clientId);
+      await logAudit(clientId, 'حذف سجل موكل');
+      await reloadAllStoresFromDB();
+      closeModal();
+      SoundFX.play('success');
+      showToast('تم حذف الموكل بنجاح.', 'success');
+      renderWorkspace();
+    }
+
+    function openNewPoaModal(preselectedClientId = '') {
+      if (State.clients.length === 0) {
+        showToast('يرجى إضافة موكل أولاً قبل تسجيل التوكيل.', 'warning');
+        openNewClientModal();
+        return;
+      }
+      openModal('📜 تسجيل توكيل جديد', `
+        <form onsubmit="submitNewPoa(event)" class="space-y-3 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold mb-1">الموكل *</label>
+            <select name="clientId" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+              ${State.clients.map(c => `<option value="${c.id}" ${c.id === preselectedClientId ? 'selected' : ''}>${c.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">رقم التوكيل وحرفه *</label>
+              <input name="poaNumber" required placeholder="مثال: 4521 أ"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">سنة التوكيل *</label>
+              <input name="poaYear" required value="2026"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono" />
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">مكتب التوثيق *</label>
+              <input name="officeName" required placeholder="مأمورية شهر عقاري..."
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">نوع التوكيل</label>
+              <select name="poaType" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                <option value="عام قضايا">عام قضايا</option>
+                <option value="خاص">خاص</option>
+                <option value="عام رسمي شامل">عام رسمي شامل</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">صورة ضوئية للتوكيل (اختياري - صورة أو PDF)</label>
+            <input type="file" id="poa-scan-file" accept="image/*,.pdf"
+              class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs" />
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-sky-600 text-white font-extrabold text-xs">حفظ التوكيل</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function submitNewPoa(e) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const fd = new FormData(e.target);
+      const fileInput = document.getElementById('poa-scan-file');
+      let dataUrl = '';
+      let fileName = '';
+      let mimeType = '';
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        const f = fileInput.files[0];
+        dataUrl = await readFileAsDataURL(f);
+        fileName = f.name;
+        mimeType = f.type;
+      }
+
+      const poa = {
+        id: 'POA-' + Date.now(),
+        clientId: fd.get('clientId'),
+        poaNumber: String(fd.get('poaNumber') || '').trim(),
+        poaYear: String(fd.get('poaYear') || '').trim(),
+        officeName: String(fd.get('officeName') || '').trim(),
+        poaType: fd.get('poaType'),
+        status: 'ساري',
+        dataUrl,
+        fileName,
+        mimeType
+      };
+      await MizanDB.put('poas', poa);
+      await logAudit(poa.id, `إضافة توكيل رقم ${poa.poaNumber}/${poa.poaYear}`);
+      await reloadAllStoresFromDB();
+      closeModal();
+      SoundFX.play('success');
+      showToast('تم حفظ التوكيل بنجاح!', 'success');
+      renderWorkspace();
+    }
+
+    async function deletePoaRecord(poaId) {
+      if (!(await assertCanWrite())) return;
+      await MizanDB.delete('poas', poaId);
+      await logAudit(poaId, 'حذف سجل توكيل');
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      showToast('تم حذف التوكيل.', 'success');
+      renderWorkspace();
+    }
+
+    /* -------------------------------------------------------------------------
+       الوحدة 3: ملفات القضايا والخزينة المشفّرة والتحديث السريع
+       ------------------------------------------------------------------------- */
+    function renderCasesModule(vp) {
+      const categories = ['الكل', 'مدني', 'جنائي', 'مجلس دولة', 'أسرة', 'عمالي', 'اقتصادي'];
+      const isSecretary = State.currentRole === 'secretary';
+      const filtered = State.cases.filter(c => State.caseFilter === 'الكل' || c.category === State.caseFilter);
+
+      vp.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black">📁 ملفات القضايا والخزينة المشفّرة</h2>
+            <p class="text-xs text-slate-400">إدارة الدعاوى، التحديث السريع لموقف الدعوى، وإرسال رابط المتابعة للموكل عبر واتساب</p>
+          </div>
+          <button onclick="openNewCaseModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow">
+            + فتح ملف قضية جديدة
+          </button>
+        </div>
+
+        <!-- فلاتر التصنيف -->
+        <div class="flex flex-wrap gap-1.5">
+          ${categories.map(cat => `
+            <button onclick="State.caseFilter='${cat}'; renderWorkspace();"
+              class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition ${State.caseFilter === cat
+                ? 'bg-amber-500 text-slate-950 shadow'
+                : 'glass-card text-slate-600 dark:text-slate-300 hover:border-amber-500/50'}">
+              ${cat}
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- بطاقات القضايا -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          ${filtered.length === 0 ? `
+            <div class="lg:col-span-2 glass-card rounded-2xl p-8 text-center text-xs sm:text-sm text-slate-400">
+              لا توجد قضايا مسجلة في هذا التصنيف حالياً.
+            </div>
+          ` : filtered.map(cs => {
+            const cl = State.clients.find(c => c.id === cs.clientId);
+            const latest = getLatestHearingForCase(cs.id);
+            const docsCount = State.documents.filter(d => d.caseId === cs.id).length;
+
+            return `
+              <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-3 border border-slate-200/70 dark:border-slate-800">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="px-2.5 py-0.5 rounded-lg bg-amber-500/15 text-amber-500 font-black text-xs">${cs.category}</span>
+                      <h3 class="font-black text-base text-slate-900 dark:text-white">دعوى رقم ${cs.caseNumber} لسنة ${cs.caseYear}</h3>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">🏛️ ${cs.court} — ${cs.circuit}</p>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                    ${cs.status}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 text-xs">
+                  <div>
+                    <span class="text-slate-400 block">الموكل:</span>
+                    <strong class="text-slate-800 dark:text-white">${cl ? cl.name : 'غير محدد'}</strong>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 block">الخصم:</span>
+                    <strong class="text-slate-800 dark:text-white">${cs.opponentName || '—'}</strong>
+                  </div>
+                  <div class="col-span-2 pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                    <span class="text-slate-400">آخر تحديث: </span>
+                    <strong class="text-sky-400">${latest ? latest.decision : (cs.subject || 'تم قيد الدعوى')}</strong>
+                    ${latest && latest.nextDate ? `<span class="block text-amber-500 mt-0.5">📅 الجلسة القادمة: ${latest.nextDate}</span>` : ''}
+                  </div>
+                </div>
+
+                <!-- شريط الإجراءات -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <div class="flex flex-wrap gap-1.5">
+                    <button onclick="openQuickCaseStatusModal('${cs.id}')"
+                      class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs transition">
+                      ⚡ تحديث الحالة
+                    </button>
+                    <button onclick="openCaseVaultModal('${cs.id}')"
+                      class="px-3 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600 text-sky-400 hover:text-white border border-sky-500/30 font-bold text-xs transition">
+                      🔐 الخزينة (${docsCount})
+                    </button>
+                    <button onclick="sendClientWhatsAppUpdate('${cs.id}')"
+                      class="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 font-bold text-xs transition">
+                      📲 واتساب للموكل
+                    </button>
+                  </div>
+
+                  <div class="flex items-center gap-1.5">
+                    <button onclick="copyToClipboard('${cs.trackingCode}', 'كود المتابعة ${cs.trackingCode}')"
+                      class="px-2.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 font-mono text-[11px] font-bold">
+                      ${cs.trackingCode}
+                    </button>
+                    ${!isSecretary ? `
+                      <button onclick="deleteCaseRecord('${cs.id}')" title="حذف الدعوى"
+                        class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-500 hover:text-white text-xs font-bold transition">
+                        🗑️
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function openNewCaseModal() {
+      if (State.clients.length === 0) {
+        showToast('يرجى إضافة موكل أولاً قبل فتح ملف قضية.', 'warning');
+        openNewClientModal();
+        return;
+      }
+      const randomTrk = 'TRK-' + Math.floor(1000 + Math.random() * 9000);
+      openModal('⚖️ فتح ملف قضية جديدة', `
+        <form onsubmit="submitNewCase(event)" class="space-y-3 text-xs sm:text-sm">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">الموكل *</label>
+              <select name="clientId" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                ${State.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold mb-1">التصنيف القضائي *</label>
+              <select name="category" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                <option value="مدني">مدني</option>
+                <option value="جنائي">جنائي</option>
+                <option value="مجلس دولة">مجلس دولة</option>
+                <option value="أسرة">أسرة</option>
+                <option value="عمالي">عمالي</option>
+                <option value="اقتصادي">اقتصادي</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">رقم الدعوى *</label>
+              <input name="caseNumber" required placeholder="مثال: 1245"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">السنة *</label>
+              <input name="caseYear" required value="2026"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono" />
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">المحكمة *</label>
+              <input name="court" required placeholder="محكمة جنوب القاهرة الابتدائية"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">الدائرة *</label>
+              <input name="circuit" required placeholder="الدائرة 12 مدني كلي"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">اسم الخصم *</label>
+              <input name="opponentName" required placeholder="اسم الخصم بالكامل"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">كود متابعة الموكل</label>
+              <input name="trackingCode" value="${randomTrk}" required
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono font-bold text-amber-500" />
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">موضوع الدعوى</label>
+            <textarea name="subject" rows="2" placeholder="ملخص موضوع الدعوى والطلبات..."
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700"></textarea>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">حفظ الدعوى</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function submitNewCase(e) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const fd = new FormData(e.target);
+      const cs = {
+        id: 'CASE-' + Date.now(),
+        clientId: fd.get('clientId'),
+        category: fd.get('category'),
+        caseNumber: String(fd.get('caseNumber') || '').trim(),
+        caseYear: String(fd.get('caseYear') || '').trim(),
+        court: String(fd.get('court') || '').trim(),
+        circuit: String(fd.get('circuit') || '').trim(),
+        opponentName: String(fd.get('opponentName') || '').trim(),
+        trackingCode: String(fd.get('trackingCode') || '').trim().toUpperCase(),
+        subject: String(fd.get('subject') || '').trim(),
+        status: 'متداولة',
+        createdAt: todayISO(0)
+      };
+      await MizanDB.put('cases', cs);
+      await logAudit(cs.id, `فتح ملف دعوى جديدة رقم ${cs.caseNumber}/${cs.caseYear}`);
+      await reloadAllStoresFromDB();
+      closeModal();
+      SoundFX.play('success');
+      showToast('تم فتح ملف القضية بنجاح!', 'success');
+      renderWorkspace();
+    }
+
+    function openQuickCaseStatusModal(caseId) {
+      const cs = State.cases.find(c => c.id === caseId);
+      if (!cs) return;
+      const latest = getLatestHearingForCase(caseId);
+      openModal(`⚡ تحديث سريع لموقف الدعوى ${cs.caseNumber}/${cs.caseYear}`, `
+        <form onsubmit="submitQuickCaseStatus(event, '${cs.id}')" class="space-y-3 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold mb-1">الحالة العامة للدعوى *</label>
+            <select name="status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+              ${['متداولة', 'مؤجلة لتقديم مستندات', 'مؤجلة للإعلان', 'محالة للخبراء', 'محجوزة للحكم', 'صدر حكم ابتدائي', 'مستأنفة', 'منتهية / صدر حكم'].map(st =>
+                `<option value="${st}" ${cs.status === st ? 'selected' : ''}>${st}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">آخر إجراء / قرار المحكمة (يظهر للموكل فوراً) *</label>
+            <textarea name="decision" rows="2" required placeholder="مثال: تم تقديم حافظة المستندات وتأجلت لجلسة قادمة للمذكرات..."
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">${latest ? latest.decision : ''}</textarea>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">تاريخ الجلسة القادمة</label>
+              <input type="date" name="nextDate" value="${latest ? (latest.nextDate || '') : ''}"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">المطلوب للجلسة القادمة</label>
+              <input name="requiredAction" value="${latest ? (latest.requiredAction || '') : ''}" placeholder="إعلان / مذكرة / شهادة..."
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">حفظ التحديث الفوري</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function submitQuickCaseStatus(e, caseId) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const cs = State.cases.find(c => c.id === caseId);
+      if (!cs) return;
+      const fd = new FormData(e.target);
+
+      cs.status = fd.get('status');
+      await MizanDB.put('cases', cs);
+
+      const newHearing = {
+        id: 'HRG-' + Date.now(),
+        caseId,
+        date: todayISO(0),
+        decision: String(fd.get('decision') || '').trim(),
+        nextDate: String(fd.get('nextDate') || '').trim(),
+        requiredAction: String(fd.get('requiredAction') || '').trim()
+      };
+      await MizanDB.put('hearings', newHearing);
+      await logAudit(caseId, `تحديث موقف الدعوى إلى "${cs.status}" — ${newHearing.decision}`);
+      await reloadAllStoresFromDB();
+
+      closeModal();
+      SoundFX.play('success');
+      showToast('تم تحديث موقف الدعوى وبوابة استعلام الموكل بنجاح!', 'success');
+      renderWorkspace();
+    }
+
+    function sendClientWhatsAppUpdate(caseId) {
+      const cs = State.cases.find(c => c.id === caseId);
+      if (!cs) return;
+      const cl = State.clients.find(c => c.id === cs.clientId);
+      const latest = getLatestHearingForCase(caseId);
+      const directUrl = buildClientDirectPortalUrl(cs);
+
+      const msgLines = [
+        `تحية طيبة من ${State.officeInfo ? State.officeInfo.officeName : 'مكتب المحاماة'}،`,
+        `تحديث بخصوص الدعوى رقم (${cs.caseNumber}/${cs.caseYear}) أمام ${cs.court}:`,
+        `• الموقف الحالي: ${cs.status}`,
+        `• آخر قرار/إجراء: ${latest ? latest.decision : 'جارٍ المتابعة'}`,
+        latest && latest.nextDate ? `• موعد الجلسة القادمة: ${latest.nextDate}` : '',
+        `• كود المتابعة: ${cs.trackingCode}`,
+        `رابط المتابعة المباشر: ${directUrl}`
+      ].filter(Boolean).join('\n');
+
+      copyToClipboard(msgLines, 'رسالة التحديث ورابط الموكل');
+
+      let rawPhone = (cl && cl.phone ? cl.phone : '').replace(/\D/g, '');
+      if (rawPhone.startsWith('01') && rawPhone.length === 11) {
+        rawPhone = '2' + rawPhone;
+      }
+      if (rawPhone) {
+        window.open(`https://wa.me/${rawPhone}?text=${encodeURIComponent(msgLines)}`, '_blank', 'noopener');
+      }
+    }
+
+    async function deleteCaseRecord(caseId) {
+      if (!(await assertCanWrite())) return;
+      if (State.currentRole === 'secretary') {
+        showToast('صلاحية الإداري/السكرتارية لا تسمح بحذف القضايا.', 'warning');
+        return;
+      }
+      const cs = State.cases.find(c => c.id === caseId);
+      if (!cs) return;
+      openModal('⚠️ تأكيد حذف ملف الدعوى', `
+        <div class="space-y-4 text-xs sm:text-sm">
+          <p>هل أنت متأكد من حذف الدعوى رقم <strong>${cs.caseNumber}/${cs.caseYear}</strong> نهائياً؟</p>
+          <div class="flex justify-end gap-2">
+            <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button onclick="confirmDeleteCase('${caseId}')" class="px-4 py-2 rounded-xl bg-rose-600 text-white font-extrabold text-xs">🗑️ نعم، احذف الدعوى</button>
+          </div>
+        </div>
+      `, 'max-w-md');
+    }
+
+    async function confirmDeleteCase(caseId) {
+      if (!(await assertCanWrite())) return;
+      await MizanDB.delete('cases', caseId);
+      await logAudit(caseId, 'حذف ملف دعوى');
+      await reloadAllStoresFromDB();
+      closeModal();
+      SoundFX.play('success');
+      showToast('تم حذف الدعوى بنجاح.', 'success');
+      renderWorkspace();
+    }
+
+    function openCaseVaultModal(caseId) {
+      const cs = State.cases.find(c => c.id === caseId);
+      if (!cs) return;
+      const docs = State.documents.filter(d => d.caseId === caseId);
+      const isSecretary = State.currentRole === 'secretary';
+
+      openModal(`🔐 الخزينة المشفّرة — دعوى ${cs.caseNumber}/${cs.caseYear}`, `
+        <div class="space-y-4 text-xs sm:text-sm">
+          <form onsubmit="submitCaseDocument(event, '${cs.id}')" class="p-3.5 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-300/60 dark:border-slate-700 space-y-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <input name="title" required placeholder="عنوان المستند (صحيفة دعوى / مذكرة / حكم...)"
+                class="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs" />
+              <select name="docType" class="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs">
+                <option value="صحيفة دعوى">صحيفة دعوى</option>
+                <option value="مذكرة دفاع">مذكرة دفاع</option>
+                <option value="حافظة مستندات">حافظة مستندات</option>
+                <option value="صورة حكم">صورة حكم</option>
+                <option value="إعلان محضرين">إعلان محضرين</option>
+              </select>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <input type="file" id="vault-file-input" accept="image/*,.pdf" required class="text-xs" />
+              <label class="flex items-center gap-1.5 text-xs font-bold text-amber-500">
+                <input type="checkbox" name="confidential" /> مستند سري (يحجب عن السكرتارية)
+              </label>
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs">
+              ⬆️ حفظ المستند في الخزينة المحلية
+            </button>
+          </form>
+
+          <div class="space-y-2 max-h-[45vh] overflow-y-auto">
+            ${docs.length === 0 ? `
+              <p class="text-center text-xs text-slate-400 py-4">لا توجد مستندات مرفوعة لهذه الدعوى بعد.</p>
+            ` : docs.map(doc => {
+              const hiddenForSec = isSecretary && doc.confidential;
+              return `
+                <div class="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <strong class="text-xs sm:text-sm">${doc.title}</strong>
+                      <span class="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-500 text-[10px] font-bold">${doc.docType}</span>
+                      ${doc.confidential ? `<span class="px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-400 text-[10px] font-bold">سري</span>` : ''}
+                    </div>
+                    <span class="text-[11px] text-slate-400 font-mono">${doc.fileName} • ${doc.uploadedAt}</span>
+                  </div>
+                  ${hiddenForSec ? `<span class="text-[11px] text-amber-500 font-bold">صلاحية مقيدة</span>` : `
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <button onclick="previewStoredAttachment('doc', '${doc.id}')" class="px-3 py-1.5 rounded-xl bg-sky-600 text-white font-bold text-xs">
+                        👁️ معاينة
+                      </button>
+                      ${!isSecretary ? `
+                        <button onclick="deleteVaultDocument('${doc.id}', '${cs.id}')" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-500 hover:text-white font-bold text-xs transition">
+                          🗑️
+                        </button>
+                      ` : ''}
+                    </div>
+                  `}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `, 'max-w-2xl');
+    }
+
+    async function submitCaseDocument(e, caseId) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const fd = new FormData(e.target);
+      const fileInput = document.getElementById('vault-file-input');
+      if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        showToast('يرجى اختيار ملف أو صورة لرفعها.', 'warning');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const dataUrl = await readFileAsDataURL(file);
+
+      const doc = {
+        id: 'DOC-' + Date.now(),
+        caseId,
+        title: String(fd.get('title') || '').trim(),
+        docType: fd.get('docType'),
+        confidential: Boolean(fd.get('confidential')),
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+        dataUrl,
+        uploadedAt: new Date().toLocaleDateString('ar-EG')
+      };
+
+      await MizanDB.put('documents', doc);
+      await logAudit(caseId, `إضافة مستند للخزينة: ${doc.title}`);
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      showToast('تم حفظ المستند داخل الخزينة المشفّرة بنجاح!', 'success');
+      openCaseVaultModal(caseId);
+      renderWorkspace();
+    }
+
+    async function deleteVaultDocument(docId, caseId) {
+      if (!(await assertCanWrite())) return;
+      await MizanDB.delete('documents', docId);
+      await logAudit(caseId, 'حذف مستند من الخزينة');
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      showToast('تم حذف المستند.', 'success');
+      openCaseVaultModal(caseId);
+      renderWorkspace();
+    }
+
+    /* -------------------------------------------------------------------------
+       الوحدة 4: أجندة الجلسات والرول اليومي
+       ------------------------------------------------------------------------- */
+    function renderHearingsModule(vp) {
+      const today = todayISO(0);
+      const sorted = State.hearings.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+      const filtered = sorted.filter(h => {
+        if (State.hearingFilter === 'اليوم') return h.date === today;
+        if (State.hearingFilter === 'القادمة') return h.nextDate && h.nextDate >= today;
+        return true;
+      });
+
+      vp.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black">🗓️ أجندة الجلسات والرول اليومي</h2>
+            <p class="text-xs text-slate-400">تسجيل قرارات الجلسات وتحويل المطلوب للجلسة القادمة إلى مهمة إدارية بضغطة زر</p>
+          </div>
+          <button onclick="openNewHearingModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow">
+            + تسجيل جلسة / قرار جديد
+          </button>
+        </div>
+
+        <div class="flex gap-2">
+          ${['الكل', 'اليوم', 'القادمة'].map(f => `
+            <button onclick="State.hearingFilter='${f}'; renderWorkspace();"
+              class="px-4 py-1.5 rounded-xl text-xs font-extrabold ${State.hearingFilter === f ? 'bg-amber-500 text-slate-950' : 'glass-card'}">
+              ${f}
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="space-y-3">
+          ${filtered.length === 0 ? `
+            <div class="glass-card rounded-2xl p-8 text-center text-xs sm:text-sm text-slate-400">
+              لا توجد جلسات مسجلة في هذا العرض.
+            </div>
+          ` : filtered.map(h => {
+            const cs = State.cases.find(c => c.id === h.caseId);
+            return `
+              <div class="glass-card rounded-2xl p-4 space-y-2.5 border border-slate-200/70 dark:border-slate-800">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <strong class="text-sm sm:text-base text-amber-500">${cs ? `دعوى ${cs.caseNumber}/${cs.caseYear} — ${cs.court}` : 'دعوى محذوفة'}</strong>
+                    <span class="block text-xs text-slate-400 font-mono">تاريخ الجلسة: ${h.date} ${h.nextDate ? `| الجلسة القادمة: ${h.nextDate}` : ''}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    ${h.requiredAction ? `
+                      <button onclick="convertHearingToTask('${h.id}')" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs">
+                        ⚡ تحويل لمهمة إدارية
+                      </button>
+                    ` : ''}
+                    <button onclick="deleteHearingRecord('${h.id}')" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-500 hover:text-white text-xs font-bold">
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+                <p class="text-xs sm:text-sm"><strong>قرار المحكمة:</strong> ${h.decision}</p>
+                ${h.requiredAction ? `<p class="text-xs text-rose-400"><strong>المطلوب للجلسة القادمة:</strong> ${h.requiredAction}</p>` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function openNewHearingModal() {
+      if (State.cases.length === 0) {
+        showToast('يرجى إضافة قضية أولاً قبل تسجيل الجلسات.', 'warning');
+        openNewCaseModal();
+        return;
+      }
+      openModal('🗓️ تسجيل جلسة وقرار محكمة', `
+        <form onsubmit="submitNewHearing(event)" class="space-y-3 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold mb-1">الدعوى *</label>
+            <select name="caseId" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+              ${State.cases.map(c => `<option value="${c.id}">دعوى ${c.caseNumber}/${c.caseYear} - ${c.court}</option>`).join('')}
+            </select>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">تاريخ الجلسة *</label>
+              <input type="date" name="date" required value="${todayISO(0)}"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">تاريخ الجلسة القادمة</label>
+              <input type="date" name="nextDate"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">قرار المحكمة / ما تم في الجلسة *</label>
+            <textarea name="decision" rows="2" required placeholder="اكتب قرار المحكمة بالتفصيل..."
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700"></textarea>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">المطلوب للجلسة القادمة</label>
+            <input name="requiredAction" placeholder="مثال: إعلان الخصم بالطلبات / تقديم حافظة مستندات..."
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">حفظ الجلسة</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function submitNewHearing(e) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const fd = new FormData(e.target);
+      const h = {
+        id: 'HRG-' + Date.now(),
+        caseId: fd.get('caseId'),
+        date: fd.get('date'),
+        nextDate: fd.get('nextDate') || '',
+        decision: String(fd.get('decision') || '').trim(),
+        requiredAction: String(fd.get('requiredAction') || '').trim()
+      };
+      await MizanDB.put('hearings', h);
+      await logAudit(h.caseId, `تسجيل جلسة بتاريخ ${h.date}: ${h.decision}`);
+      await reloadAllStoresFromDB();
+      closeModal();
+      SoundFX.play('success');
+      showToast('تم تسجيل الجلسة وتحديث سجل الدعوى!', 'success');
+      renderWorkspace();
+    }
+
+    async function convertHearingToTask(hearingId) {
+      if (!(await assertCanWrite())) return;
+      const h = State.hearings.find(x => x.id === hearingId);
+      if (!h) return;
+      const cs = State.cases.find(c => c.id === h.caseId);
+      const task = {
+        id: 'TSK-' + Date.now(),
+        caseId: h.caseId,
+        title: `${h.requiredAction} (${cs ? `دعوى ${cs.caseNumber}/${cs.caseYear}` : ''})`,
+        assignee: 'المحامي المتدرب / السكرتارية',
+        dueDate: h.nextDate || todayISO(3),
+        status: 'قيد التنفيذ'
+      };
+      await MizanDB.put('tasks', task);
+      await logAudit(h.caseId, `تحويل قرار الجلسة إلى مهمة إدارية: ${task.title}`);
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      showToast('تم تحويل المطلوب إلى مهمة إدارية بنجاح!', 'success');
+      renderWorkspace();
+    }
+
+    async function deleteHearingRecord(hearingId) {
+      if (!(await assertCanWrite())) return;
+      await MizanDB.delete('hearings', hearingId);
+      await logAudit('HEARING', 'حذف سجل جلسة');
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      showToast('تم حذف سجل الجلسة.', 'success');
+      renderWorkspace();
+    }
+
+    /* -------------------------------------------------------------------------
+       الوحدة 5: المهام الإدارية
+       ------------------------------------------------------------------------- */
+    function renderTasksModule(vp) {
+      const filtered = State.tasks.filter(t => State.taskFilter === 'الكل' || t.status === State.taskFilter);
+      vp.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black">✅ المهام الإدارية وأعمال المحضرين</h2>
+            <p class="text-xs text-slate-400">توزيع ومتابعة الأعمال الإدارية واستخراج الشهادات والإعلانات</p>
+          </div>
+          <button onclick="openNewTaskModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow">
+            + إضافة مهمة إدارية
+          </button>
+        </div>
+
+        <div class="flex gap-2">
+          ${['الكل', 'قيد التنفيذ', 'مكتملة'].map(st => `
+            <button onclick="State.taskFilter='${st}'; renderWorkspace();"
+              class="px-4 py-1.5 rounded-xl text-xs font-extrabold ${State.taskFilter === st ? 'bg-amber-500 text-slate-950' : 'glass-card'}">
+              ${st}
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="space-y-2.5">
+          ${filtered.length === 0 ? `
+            <div class="glass-card rounded-2xl p-8 text-center text-xs sm:text-sm text-slate-400">
+              لا توجد مهام إدارية مسجلة حالياً.
+            </div>
+          ` : filtered.map(t => {
+            const done = t.status === 'مكتملة';
+            return `
+              <div class="glass-card rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-200/70 dark:border-slate-800">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${done ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-500'}">${t.status}</span>
+                    <strong class="text-sm ${done ? 'line-through opacity-60' : ''}">${t.title}</strong>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-1">👤 المكلّف: ${t.assignee || '—'} | 📅 الموعد النهائي: ${t.dueDate || '—'}</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <button onclick="toggleTaskDone('${t.id}')" class="px-3.5 py-1.5 rounded-xl ${done ? 'bg-slate-600' : 'bg-emerald-600 hover:bg-emerald-500'} text-white font-bold text-xs">
+                    ${done ? 'إعادة فتح' : 'إتمام المهمة ✓'}
+                  </button>
+                  <button onclick="deleteTaskRecord('${t.id}')" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-500 hover:text-white text-xs font-bold">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function openNewTaskModal() {
+      openModal('✅ إضافة مهمة إدارية جديدة', `
+        <form onsubmit="submitNewTask(event)" class="space-y-3 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold mb-1">وصف المهمة الإدارية *</label>
+            <input name="title" required placeholder="مثال: استخراج شهادة من جدول المحكمة / تسليم إعلان محضرين"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">المكلّف بالتنفيذ</label>
+              <input name="assignee" placeholder="اسم المحامي المتدرب أو الإداري"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">تاريخ التنفيذ المطلوب</label>
+              <input type="date" name="dueDate" value="${todayISO(2)}"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">حفظ المهمة</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function submitNewTask(e) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const fd = new FormData(e.target);
+      const t = {
+        id: 'TSK-' + Date.now(),
+        title: String(fd.get('title') || '').trim(),
+        assignee: String(fd.get('assignee') || '').trim(),
+        dueDate: fd.get('dueDate') || todayISO(1),
+        status: 'قيد التنفيذ'
+      };
+      await MizanDB.put('tasks', t);
+      await logAudit('TASK', `إضافة مهمة إدارية: ${t.title}`);
+      await reloadAllStoresFromDB();
+      closeModal();
+      SoundFX.play('success');
+      showToast('تمت إضافة المهمة الإدارية!', 'success');
+      renderWorkspace();
+    }
+
+    async function toggleTaskDone(taskId) {
+      if (!(await assertCanWrite())) return;
+      const t = State.tasks.find(x => x.id === taskId);
+      if (!t) return;
+      t.status = t.status === 'مكتملة' ? 'قيد التنفيذ' : 'مكتملة';
+      await MizanDB.put('tasks', t);
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      renderWorkspace();
+    }
+
+    async function deleteTaskRecord(taskId) {
+      if (!(await assertCanWrite())) return;
+      await MizanDB.delete('tasks', taskId);
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      showToast('تم حذف المهمة.', 'success');
+      renderWorkspace();
+    }
+
+    /* -------------------------------------------------------------------------
+       الوحدة 6: مولّد الحوافظ وطلبات الشهادات الرسمية للطباعة (A4 - أسود وأبيض - 17pt)
+       ------------------------------------------------------------------------- */
+    function renderDocGenModule(vp) {
+      const tierMeta = TIERS_META[State.licenseInfo?.tier || 'PRO'];
+      if (!tierMeta.docGen) {
+        vp.innerHTML = `
+          <div class="glass-card rounded-3xl p-8 text-center space-y-3 border border-amber-500/40">
+            <span class="text-4xl">🔒</span>
+            <h2 class="text-xl font-black text-amber-500">مولّد الحوافظ الرسمية متاح في باقة PRO و Enterprise</h2>
+            <p class="text-xs text-slate-400">قم بترقية باقة المكتب لإنشاء وطباعة حوافظ المستندات وطلبات استخراج الشهادات بتنسيق A4 رسمي.</p>
+            <button onclick="openRenewLicenseModal()" class="px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">🔑 ترقية الباقة الآن</button>
+          </div>
+        `;
+        return;
+      }
+
+      vp.innerHTML = `
+        <div>
+          <h2 class="text-xl sm:text-2xl font-black">🖨️ مولّد الحوافظ والمستندات الرسمية (A4)</h2>
+          <p class="text-xs text-slate-400">توليد وطباعة حوافظ المستندات وطلبات استخراج الشهادات الرسمية باللونين الأبيض والأسود وبخط 17pt جاهز للمحكمة</p>
+        </div>
+
+        <form onsubmit="printFormalLegalDocument(event)" class="glass-card rounded-2xl p-4 sm:p-6 space-y-4 text-xs sm:text-sm">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">نوع المستند الرسمي *</label>
+              <select name="templateType" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700">
+                <option value="حافظة مستندات">حافظة مستندات مقدمة للمحكمة</option>
+                <option value="طلب استخراج شهادة">طلب استخراج شهادة من واقع الجدول</option>
+                <option value="طلب صورة رسمية">طلب استخراج صورة رسمية من حكم / محضر جلسة</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold mb-1">اختر الدعوى (لتعبئة البيانات تلقائياً)</label>
+              <select name="caseId" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700">
+                <option value="">-- إدخال يدوي أو اختر دعوى --</option>
+                ${State.cases.map(c => {
+                  const cl = State.clients.find(x => x.id === c.clientId);
+                  return `<option value="${c.id}">دعوى ${c.caseNumber}/${c.caseYear} (${cl ? cl.name : ''})</option>`;
+                }).join('')}
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold mb-1">تاريخ الجلسة / التقديم</label>
+              <input type="date" name="sessionDate" value="${todayISO(0)}"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700" />
+            </div>
+            <div>
+              <label class="block font-bold mb-1">اسم مقدم الطلب (المحامي)</label>
+              <input name="lawyerName" value="${State.officeInfo ? State.officeInfo.managerName : ''}"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">بيان المستندات المرفقة أو مضمون الطلب (كل بند في سطر مستقل) *</label>
+            <textarea name="itemsText" rows="5" required placeholder="1- أصل عقد البيع المؤرخ في ...&#10;2- صورة ضوئية من التوكيل الرسمي العام&#10;3- إنذار رسمي على يد محضر..."
+              class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700"></textarea>
+          </div>
+
+          <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow">
+            🖨️ معاينة وطباعة الورقة الرسمية (A4)
+          </button>
+        </form>
+      `;
+    }
+
+    function printFormalLegalDocument(e) {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const templateType = fd.get('templateType');
+      const cs = State.cases.find(c => c.id === fd.get('caseId'));
+      const cl = cs ? State.clients.find(c => c.id === cs.clientId) : null;
+      const lines = String(fd.get('itemsText') || '').split('\n').map(s => s.trim()).filter(Boolean);
+      const officeName = State.officeInfo ? State.officeInfo.officeName : 'مكتب المحاماة';
+      const lawyerName = String(fd.get('lawyerName') || '').trim();
+      const sessionDate = fd.get('sessionDate') || todayISO(0);
+
+      const printContainer = document.getElementById('print-container');
+      if (!printContainer) return;
+
+      printContainer.innerHTML = `
+        <div class="print-doc-sheet">
+          <div style="text-align:center; font-weight:bold;">
+            <div>${officeName}</div>
+            <div>${templateType}</div>
+          </div>
+          <hr />
+          <div>
+            <div><strong>المحكمة:</strong> ${cs ? `${cs.court} — ${cs.circuit}` : '................................................'}</div>
+            <div><strong>رقم الدعوى:</strong> ${cs ? `${cs.caseNumber} لسنة ${cs.caseYear}` : '................ لسنة ........'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>جلسة:</strong> ${sessionDate}</div>
+            <div><strong>مقدمة من:</strong> ${cl ? `${cl.name} (${cl.roleType || 'مدعي'})` : '................................................'}</div>
+            <div><strong>ضــــــــــد:</strong> ${cs ? cs.opponentName : '................................................'}</div>
+          </div>
+          <hr />
+          ${templateType === 'حافظة مستندات' ? `
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:12%;">م</th>
+                  <th style="width:28%;">تاريخ المستند</th>
+                  <th style="width:60%;">بيان المستند ووجه الاستدلال</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${lines.map((line, i) => `
+                  <tr>
+                    <td>${i + 1}</td>
+                    <td>${sessionDate}</td>
+                    <td>${line}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : `
+            <div style="margin-top:12pt;">
+              <div><strong>السيد الأستاذ / رئيس القلم المختص — تحية طيبة وبعد،،</strong></div>
+              <div style="margin-top:8pt;">مقدمه لسيادتكم الأستاذ / <strong>${lawyerName}</strong> المحامي، بصفته وكيلاً عن السيد / <strong>${cl ? cl.name : '....................'}</strong> في الدعوى الموضحة بياناتها بعاليه، نلتمس من سيادتكم التكرم بالموافقة على الآتي:</div>
+              <div style="margin-top:10pt;">
+                ${lines.map((line, i) => `<div>${i + 1}- ${line}</div>`).join('')}
+              </div>
+            </div>
+          `}
+          <div style="margin-top:24pt; text-align:left;">
+            <div>وتفضلوا بقبول فائق الاحترام،،</div>
+            <div style="margin-top:10pt;"><strong>وكيل الطالب / ${lawyerName} المحامي</strong></div>
+          </div>
+        </div>
+      `;
+
+      setTimeout(() => window.print(), 120);
+    }
+
+    /* -------------------------------------------------------------------------
+       الوحدة 7: حاسبة المواعيد القانونية الحرجة
+       ------------------------------------------------------------------------- */
+    function renderDeadlinesModule(vp) {
+      const tierMeta = TIERS_META[State.licenseInfo?.tier || 'PRO'];
+      if (!tierMeta.deadlines) {
+        vp.innerHTML = `
+          <div class="glass-card rounded-3xl p-8 text-center space-y-3 border border-amber-500/40">
+            <span class="text-4xl">🔒</span>
+            <h2 class="text-xl font-black text-amber-500">حاسبة المواعيد القانونية متاحة في باقة PRO و Enterprise</h2>
+            <button onclick="openRenewLicenseModal()" class="px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">🔑 ترقية الباقة</button>
+          </div>
+        `;
+        return;
+      }
+
+      const today = todayISO(0);
+      vp.innerHTML = `
+        <div>
+          <h2 class="text-xl sm:text-2xl font-black">⏳ حاسبة المواعيد القانونية الحرجة</h2>
+          <p class="text-xs text-slate-400">حساب مواعيد الاستئناف والمعارضة والنقض والتظلمات تلقائياً مع التنبيه قبل انتهاء الميعاد</p>
+        </div>
+
+        <form onsubmit="submitNewDeadline(event)" class="glass-card rounded-2xl p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs sm:text-sm items-end">
+          <div>
+            <label class="block font-bold mb-1">بيان الحكم / الإجراء *</label>
+            <input name="title" required placeholder="حكم ابتدائي دعوى 120..."
+              class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700" />
+          </div>
+          <div>
+            <label class="block font-bold mb-1">نوع الميعاد القانوني *</label>
+            <select name="daysSpan" class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700">
+              <option value="10">معارضة في حكم جنحة (10 أيام)</option>
+              <option value="15">استئناف مستعجل / أمر أداء (15 يوماً)</option>
+              <option value="40">استئناف حكم مدني / أسرة (40 يوماً)</option>
+              <option value="60">طعن بالنقض / إدارية عليا (60 يوماً)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">تاريخ صدور الحكم / الإعلان *</label>
+            <input type="date" name="startDate" required value="${today}"
+              class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700" />
+          </div>
+          <button type="submit" class="py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs">
+            + احتساب وحفظ الميعاد
+          </button>
+        </form>
+
+        <div class="space-y-2.5">
+          ${State.deadlines.length === 0 ? `
+            <div class="glass-card rounded-2xl p-8 text-center text-xs text-slate-400">
+              لا توجد مواعيد طعون مسجلة حالياً.
+            </div>
+          ` : State.deadlines.map(d => {
+            const left = Math.ceil((new Date(d.deadlineDate) - new Date(today)) / (1000 * 60 * 60 * 24));
+            const badgeColor = left < 0 ? 'bg-slate-600 text-white' : left <= 7 ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white';
+            return `
+              <div class="glass-card rounded-2xl p-4 flex items-center justify-between gap-3 border border-slate-200/70 dark:border-slate-800">
+                <div>
+                  <strong class="text-sm text-slate-900 dark:text-white">${d.title}</strong>
+                  <p class="text-xs text-slate-400 font-mono mt-0.5">تاريخ الحكم: ${d.startDate} | آخر ميعاد قانوني: <strong class="text-amber-500">${d.deadlineDate}</strong></p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="px-3 py-1 rounded-full text-xs font-extrabold ${badgeColor}">
+                    ${left < 0 ? 'انتهى الميعاد' : `متبقي ${left} يوم`}
+                  </span>
+                  <button onclick="deleteDeadlineRecord('${d.id}')" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-500 hover:text-white text-xs font-bold">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    async function submitNewDeadline(e) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const fd = new FormData(e.target);
+      const startDate = String(fd.get('startDate'));
+      const daysSpan = parseInt(fd.get('daysSpan'), 10) || 40;
+      const dt = new Date(startDate);
+      dt.setDate(dt.getDate() + daysSpan);
+      const deadlineDate = dt.toISOString().split('T')[0];
+
+      const rec = {
+        id: 'DDL-' + Date.now(),
+        title: String(fd.get('title') || '').trim(),
+        daysSpan,
+        startDate,
+        deadlineDate
+      };
+      await MizanDB.put('deadlines', rec);
+      await logAudit('DEADLINE', `تسجيل ميعاد قانوني: ${rec.title} ينتهي في ${deadlineDate}`);
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      showToast(`تم احتساب الميعاد! آخر يوم للطعن: ${deadlineDate}`, 'success');
+      renderWorkspace();
+    }
+
+    async function deleteDeadlineRecord(id) {
+      if (!(await assertCanWrite())) return;
+      await MizanDB.delete('deadlines', id);
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      renderWorkspace();
+    }
+
+    /* -------------------------------------------------------------------------
+       الوحدة 8: الإدارة المالية للأتعاب والمصروفات النثرية
+       ------------------------------------------------------------------------- */
+    function renderFinancialsModule(vp) {
+      if (State.currentRole === 'secretary') {
+        vp.innerHTML = `
+          <div class="glass-card rounded-3xl p-8 text-center space-y-2 border border-amber-500/40">
+            <span class="text-4xl">🛡️</span>
+            <h2 class="text-xl font-black text-amber-500">قسم الأتعاب محجوب عن صلاحية الإداري / السكرتارية</h2>
+            <p class="text-xs text-slate-400">البيانات المالية وأتعاب المحاماة متاحة لمدير المكتب والمحامين فقط.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const isManager = State.currentRole === 'manager';
+      const fees = State.finance.filter(f => f.kind === 'fee');
+      const expenses = State.finance.filter(f => f.kind === 'expense');
+
+      vp.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black">💰 إدارة الأتعاب ومصروفات القضايا</h2>
+            <p class="text-xs text-slate-400">فصل تام بين أتعاب المحاماة والمصروفات النثرية (رسوم، دمغات، انتقالات)</p>
+          </div>
+          <button onclick="openNewFinanceModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow">
+            + تسجيل قيد مالي
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- سجل الأتعاب -->
+          <div class="glass-card rounded-2xl p-4 space-y-3">
+            <h3 class="font-black text-sm sm:text-base text-emerald-400">💼 أتعاب المحاماة</h3>
+            ${fees.length === 0 ? `<p class="text-xs text-slate-400">لا توجد قيود أتعاب مسجلة.</p>` : fees.map(f => {
+              const rem = Math.max(0, Number(f.agreed || 0) - Number(f.paid || 0));
+              return `
+                <div class="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+                  <div>
+                    <strong class="block text-slate-800 dark:text-white">${f.label}</strong>
+                    <span class="text-slate-400">المتفق: ${formatCurrency(f.agreed)} | المدفوع: <strong class="text-emerald-400">${formatCurrency(f.paid)}</strong> | المتبقي: <strong class="text-rose-400">${formatCurrency(rem)}</strong></span>
+                  </div>
+                  ${isManager ? `<button onclick="deleteFinanceRecord('${f.id}')" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-500 hover:text-white font-bold">🗑️</button>` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- سجل المصروفات النثرية -->
+          <div class="glass-card rounded-2xl p-4 space-y-3">
+            <h3 class="font-black text-sm sm:text-base text-amber-500">🧾 مصروفات القضايا النثرية</h3>
+            ${expenses.length === 0 ? `<p class="text-xs text-slate-400">لا توجد مصروفات مسجلة.</p>` : expenses.map(ex => `
+              <div class="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+                <div>
+                  <strong class="block text-slate-800 dark:text-white">${ex.label}</strong>
+                  <span class="text-amber-400 font-bold">${formatCurrency(ex.paid)}</span> <span class="text-slate-400">• ${ex.date}</span>
+                </div>
+                ${isManager ? `<button onclick="deleteFinanceRecord('${ex.id}')" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-500 hover:text-white font-bold">🗑️</button>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function openNewFinanceModal() {
+      openModal('💰 تسجيل قيد أتعاب أو مصروفات', `
+        <form onsubmit="submitNewFinance(event)" class="space-y-3 text-xs sm:text-sm">
+          <div>
+            <label class="block font-bold mb-1">نوع القيد *</label>
+            <select name="kind" id="fin-kind-select" onchange="document.getElementById('fin-agreed-wrap').classList.toggle('hidden', this.value!=='fee')"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+              <option value="fee">أتعاب محاماة</option>
+              <option value="expense">مصروفات قضية (رسوم / دمغات / انتقالات)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">البيان (اسم الموكل أو رقم الدعوى) *</label>
+            <input name="label" required placeholder="مثال: أتعاب دعوى 1245/2026 - أ. محمد..."
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700" />
+          </div>
+          <div id="fin-agreed-wrap">
+            <label class="block font-bold mb-1">إجمالي الأتعاب المتفق عليها (ج.م)</label>
+            <input type="number" name="agreed" min="0" value="0"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono" />
+          </div>
+          <div>
+            <label class="block font-bold mb-1">المبلغ المدفوع / المنصرف حالياً (ج.م) *</label>
+            <input type="number" name="paid" min="0" required
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono" />
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">إلغاء</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs">حفظ القيد</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function submitNewFinance(e) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const fd = new FormData(e.target);
+      const rec = {
+        id: 'FIN-' + Date.now(),
+        kind: fd.get('kind'),
+        label: String(fd.get('label') || '').trim(),
+        agreed: Number(fd.get('agreed') || 0),
+        paid: Number(fd.get('paid') || 0),
+        date: todayISO(0)
+      };
+      await MizanDB.put('finance', rec);
+      await logAudit('FINANCE', `تسجيل قيد مالي: ${rec.label}`);
+      await reloadAllStoresFromDB();
+      closeModal();
+      SoundFX.play('success');
+      showToast('تم تسجيل القيد المالي بنجاح!', 'success');
+      renderWorkspace();
+    }
+
+    async function deleteFinanceRecord(id) {
+      if (!(await assertCanWrite())) return;
+      await MizanDB.delete('finance', id);
+      await reloadAllStoresFromDB();
+      SoundFX.play('success');
+      showToast('تم حذف القيد المالي.', 'success');
+      renderWorkspace();
+    }
+
+    /* =========================================================================
+       9. النسخ الاحتياطي المشفّر (.mizan) ومزامنة اليوم (.mizansync) وتفريغ السجلات
+       ========================================================================= */
+    function openBackupSyncModal() {
+      const tierMeta = TIERS_META[State.licenseInfo?.tier || 'PRO'];
+      const canBackup = tierMeta.backup;
+
+      openModal('💾 النسخ الاحتياطي المشفّر ومزامنة اليوم', `
+        <div class="space-y-4 text-xs sm:text-sm">
+          ${!canBackup ? `
+            <div class="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-500 font-bold text-xs">
+              ⚠️ النسخ الاحتياطي المشفّر متاح في باقة PRO و Enterprise. يمكنك ترقية الباقة للاستفادة منه.
+            </div>
+          ` : ''}
+
+          <!-- 1. تصدير نسخة احتياطية مشفرة كاملة (.mizan) -->
+          <form onsubmit="handleExportEncryptedBackup(event)" class="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 space-y-2.5">
+            <h4 class="font-black text-sky-400">1. تصدير نسخة احتياطية مشفّرة كاملة (.mizan)</h4>
+            <p class="text-xs text-slate-400">تجمع كافة الموكلين والتوكيلات والقضايا والمرفقات في ملف واحد مشفّر بكلمة مرور.</p>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input type="password" name="backupPass" required placeholder="اختر كلمة مرور لحماية الملف..."
+                class="flex-1 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs" />
+              <button type="submit" ${!canBackup ? 'disabled' : ''}
+                class="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-extrabold text-xs shrink-0">
+                ⬇️ تحميل النسخة (.mizan)
+              </button>
+            </div>
+          </form>
+
+          <!-- 2. استعادة نسخة احتياطية مشفرة -->
+          <form onsubmit="handleImportEncryptedBackupInWorkspace(event)" class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2.5">
+            <h4 class="font-black text-emerald-400">2. استعادة بيانات من ملف (.mizan)</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input type="file" id="ws-backup-file" accept=".mizan,.json" required
+                class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs" />
+              <input type="password" name="restorePass" required placeholder="كلمة مرور فك التشفير..."
+                class="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs" />
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">
+              🔓 فك التشفير واستعادة البيانات الآن
+            </button>
+          </form>
+
+          <!-- 3. مزامنة تحديثات اليوم (.mizansync) بين المكتب والهاتف -->
+          <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+            <h4 class="font-black text-amber-500">3. مزامنة سريعة بين كمبيوتر المكتب وهاتف المحامي (.mizansync)</h4>
+            <p class="text-xs text-slate-400">صدّر تحديثات المكتب وأرسلها عبر واتساب لفتحها على الهاتف بدون إنترنت أو سيرفر.</p>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" onclick="exportDailySyncFile()"
+                class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs">
+                📤 تصدير ملف المزامنة (.mizansync)
+              </button>
+              <label class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs cursor-pointer">
+                📥 استيراد ملف مزامنة
+                <input type="file" accept=".mizansync,.json" onchange="importDailySyncFile(event)" class="hidden" />
+              </label>
+            </div>
+          </div>
+
+          <!-- 4. مسح كافة البيانات والبدء من الصفر -->
+          <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="text-xs">
+              <strong class="text-rose-500 block">🗑️ مسح كافة البيانات والبدء من الصفر</strong>
+              <span class="text-slate-400">يحذف كل الموكلين والقضايا والجلسات مع بقاء اشتراك المكتب مفعّلاً.</span>
+            </div>
+            <button type="button" onclick="confirmWipeAllRecordsModal()"
+              class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shrink-0">
+              مسح السجلات
+            </button>
+          </div>
+        </div>
+      `, 'max-w-xl');
+    }
+
+    function downloadTextFile(filename, contentStr, mimeType = 'application/json') {
+      const blob = new Blob([contentStr], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function handleExportEncryptedBackup(e) {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const password = String(fd.get('backupPass') || '').trim();
+      if (!password) return;
+
+      const payload = {
+        officeInfo: State.officeInfo,
+        licenseInfo: State.licenseInfo,
+        clients: State.clients,
+        poas: State.poas,
+        cases: State.cases,
+        hearings: State.hearings,
+        tasks: State.tasks,
+        documents: State.documents,
+        deadlines: State.deadlines,
+        finance: State.finance,
+        auditLog: State.auditLog
+      };
+
+      const encrypted = CryptoEngine.encryptBackup(JSON.stringify(payload), password);
+      const fileName = `MizanPro_Backup_${todayISO(0)}.mizan`;
+      downloadTextFile(fileName, encrypted);
+      await logAudit('BACKUP', 'تصدير نسخة احتياطية مشفّرة كاملة');
+      SoundFX.play('success');
+      showToast(`تم تحميل النسخة الاحتياطية المشفّرة (${fileName}) بنجاح!`, 'success');
+    }
+
+    async function handleImportEncryptedBackupInWorkspace(e) {
+      e.preventDefault();
+      if (!(await assertCanWrite())) return;
+      const fd = new FormData(e.target);
+      const password = String(fd.get('restorePass') || '').trim();
+      const fileInput = document.getElementById('ws-backup-file');
+      if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        showToast('يرجى اختيار ملف النسخة الاحتياطية أولاً.', 'warning');
+        return;
+      }
+
+      try {
+        const rawText = await fileInput.files[0].text();
+        const payload = CryptoEngine.decryptBackup(rawText, password);
+        await restoreBackupPayloadIntoDB(payload);
+        closeModal();
+        SoundFX.play('success');
+        showToast('تمت استعادة النسخة الاحتياطية وتحديث البيانات بنجاح!', 'success');
+        renderWorkspace();
+      } catch (err) {
+        SoundFX.play('error');
+        showToast(err.message || 'فشل فك التشفير! تأكد من كلمة المرور.', 'error');
+      }
+    }
+
+    async function exportDailySyncFile() {
+      const syncPacket = {
+        format: 'MIZAN_PRO_DAILY_SYNC',
+        exportedAt: new Date().toISOString(),
+        officeName: State.officeInfo ? State.officeInfo.officeName : '',
+        clients: State.clients,
+        poas: State.poas,
+        cases: State.cases,
+        hearings: State.hearings,
+        tasks: State.tasks,
+        deadlines: State.deadlines,
+        finance: State.finance
+      };
+      const fileName = `MizanSync_${todayISO(0)}.mizansync`;
+      downloadTextFile(fileName, JSON.stringify(syncPacket));
+      SoundFX.play('success');
+      showToast('تم تصدير ملف المزامنة! يمكنك إرساله عبر واتساب للهاتف.', 'success');
+    }
+
+    async function importDailySyncFile(e) {
+      if (!(await assertCanWrite())) return;
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        const packet = JSON.parse(await file.text());
+        if (!packet || packet.format !== 'MIZAN_PRO_DAILY_SYNC') {
+          throw new Error('صيغة ملف المزامنة غير صالحة');
+        }
+        const syncStores = ['clients', 'poas', 'cases', 'hearings', 'tasks', 'deadlines', 'finance'];
+        for (const s of syncStores) {
+          const rows = Array.isArray(packet[s]) ? packet[s] : [];
+          for (const row of rows) {
+            await MizanDB.put(s, row);
+          }
+        }
+        await logAudit('SYNC', 'دمج تحديثات ملف المزامنة اليومي (.mizansync)');
+        await reloadAllStoresFromDB();
+        closeModal();
+        SoundFX.play('success');
+        showToast('تم دمج تحديثات ملف المزامنة بنجاح!', 'success');
+        renderWorkspace();
+      } catch (err) {
+        SoundFX.play('error');
+        showToast(err.message || 'تعذر قراءة ملف المزامنة.', 'error');
+      }
+    }
+
+    function confirmWipeAllRecordsModal() {
+      openModal('⚠️ تأكيد مسح كافة السجلات والبدء من الصفر', `
+        <div class="space-y-4 text-xs sm:text-sm">
+          <p class="leading-relaxed">
+            سيتم حذف <strong>جميع الموكلين، التوكيلات، القضايا، الجلسات، المهام، والمرفقات</strong> من قاعدة البيانات المحلية نهائياً، مع <strong>بقاء ترخيص المكتب مفعّلاً</strong>.
+          </p>
+          <div class="flex justify-end gap-2">
+            <button type="button" onclick="openBackupSyncModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs">تراجع</button>
+            <button type="button" onclick="executeWipeOfficeRecordsKeepLicense()" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs">
+              🗑️ نعم، امسح الكل وابدأ من الصفر
+            </button>
+          </div>
+        </div>
+      `, 'max-w-md');
+    }
+
+    async function executeWipeOfficeRecordsKeepLicense() {
+      if (!(await assertCanWrite())) return;
+      await MizanDB.clearAllDataStores();
+      await logAudit('SYSTEM', 'مسح كافة سجلات المكتب والبدء من الصفر مع بقاء الترخيص سارياً');
+      await reloadAllStoresFromDB();
+      closeModal();
+      SoundFX.play('success');
+      showToast('تم تفريغ جميع سجلات المكتب بنجاح، يمكنك البدء من الصفر الآن.', 'success');
+      renderWorkspace();
+    }
+
+    /* =========================================================================
+       10. بوابة استعلام الموكلين (Client Status Portal)
+       ========================================================================= */
+    function openClientPortalModal(prefillCode = '') {
+      openModal('🔍 بوابة استعلام الموكلين عن موقف الدعاوى', `
+        <div class="space-y-4 text-xs sm:text-sm">
+          <p class="text-xs text-slate-400 leading-relaxed">
+            أدخل <strong>كود المتابعة</strong> الخاص بدعواك (مثل <code class="font-mono text-amber-500">TRK-XXXX</code>) أو الصق <strong>رمز المتابعة المحمول</strong> المرسل من المكتب via واتساب.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input id="modal-cp-input" value="${prefillCode}" placeholder="اكتب كود المتابعة أو الرمز المحمول..."
+              onkeydown="if(event.key==='Enter'){event.preventDefault();runClientInquiry('modal-cp-input','modal-cp-result');}"
+              class="flex-1 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono font-bold text-center" />
+            <button type="button" onclick="runClientInquiry('modal-cp-input','modal-cp-result')"
+              class="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shrink-0">
+              🔍 استعلام
+            </button>
+          </div>
+          <div id="modal-cp-result"></div>
+        </div>
+      `, 'max-w-lg');
+
+      if (prefillCode) {
+        setTimeout(() => runClientInquiry('modal-cp-input', 'modal-cp-result'), 50);
+      }
+    }
+
+    function runClientInquiry(inputId, resultId) {
+      const inp = document.getElementById(inputId);
+      const resBox = document.getElementById(resultId);
+      if (!inp || !resBox) return;
+      const raw = inp.value.trim();
+      if (!raw) {
+        showToast('يرجى إدخال كود المتابعة أولاً.', 'warning');
+        return;
+      }
+
+      // 1. التحقق إذا كان رمزاً محمولاً موقّعاً MIZAN-STATUS-...
+      if (raw.startsWith('MIZAN-STATUS-')) {
+        try {
+          const bodyPart = raw.slice('MIZAN-STATUS-'.length);
+          const [encoded, sig] = bodyPart.split('.');
+          const expectedSig = CryptoEngine.sha256Hex(`${encoded}|${MASTER_LICENSE_SECRET}`).slice(0, 8).toUpperCase();
+          if (sig !== expectedSig) throw new Error('توقيع الرمز غير صالح');
+          const info = JSON.parse(CryptoEngine.decodeUtf8Base64(encoded));
+          SoundFX.play('success');
+          resBox.innerHTML = renderClientInquiryCard(info);
+          return;
+        } catch (e) {
+          SoundFX.play('error');
+          resBox.innerHTML = `<div class="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-400 text-xs font-bold">رمز المتابعة المحمول غير صالح أو تالف.</div>`;
+          return;
+        }
+      }
+
+      // 2. البحث المحلي بكود المتابعة TRK-XXXX
+      const cs = State.cases.find(c => (c.trackingCode || '').toUpperCase() === raw.toUpperCase());
+      if (!cs) {
+        SoundFX.play('error');
+        resBox.innerHTML = `<div class="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-400 text-xs font-bold">لم يتم العثور على دعوى مسجلة بهذا الكود على هذا الجهاز.</div>`;
+        return;
+      }
+
+      const cl = State.clients.find(c => c.id === cs.clientId);
+      const latest = getLatestHearingForCase(cs.id);
+      SoundFX.play('success');
+      resBox.innerHTML = renderClientInquiryCard({
+        office: State.officeInfo ? State.officeInfo.officeName : 'مكتب المحاماة',
+        trk: cs.trackingCode,
+        num: `${cs.caseNumber}/${cs.caseYear}`,
+        court: `${cs.court} - ${cs.circuit}`,
+        client: cl ? cl.name : 'موكل',
+        status: cs.status,
+        lastDate: latest ? latest.date : '',
+        lastDec: latest ? latest.decision : 'تم قيد الدعوى وجارٍ متابعة الجلسات.',
+        nextDate: latest ? latest.nextDate : 'يُحدد لاحقاً'
+      });
+    }
+
+    function renderClientInquiryCard(info) {
+      return `
+        <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/40 space-y-2 text-xs sm:text-sm">
+          <div class="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+            <strong class="text-emerald-400">🏛️ ${info.office}</strong>
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-extrabold">${info.status}</span>
+          </div>
+          <p><strong>الموكل:</strong> ${info.client}</p>
+          <p><strong>رقم الدعوى:</strong> ${info.num} — ${info.court}</p>
+          <p><strong>آخر قرار / إجراء ${info.lastDate ? `(${info.lastDate})` : ''}:</strong> <span class="text-amber-400 font-bold">${info.lastDec}</span></p>
+          <p><strong>موعد الجلسة القادمة:</strong> <strong class="text-sky-400 font-mono">${info.nextDate || 'يُحدد لاحقاً'}</strong></p>
+        </div>
+      `;
+    }
+
+    /* =========================================================================
+       11. لوحة السوبر أدمن لإدارة التراخيص وتوليد الأكواد (Super Admin)
+       ========================================================================= */
+    function openSuperAdminModal() {
+      if (!State.superAdminUnlocked) {
+        openModal('👑 بوابة إدارة التراخيص والاشتراكات', `
+          <form onsubmit="unlockSuperAdmin(event)" class="space-y-4 text-xs sm:text-sm">
+            <p class="text-xs text-slate-400">أدخل كلمة مرور مدير النظام للوصول إلى مولّد أكواد الاشتراكات وإدارة التراخيص.</p>
+            <input type="password" id="sa-pass-input" required autofocus placeholder="كلمة المرور..."
+              class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-amber-500/40 text-center font-mono" />
+            <button type="submit" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs">
+              🔓 دخول لوحة الإدارة
+            </button>
+          </form>
+        `, 'max-w-md');
+        return;
+      }
+
+      const listHtml = State.generatedLicenses.slice().reverse().map(item => `
+        <div class="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <strong class="font-mono text-amber-500 select-all">${item.key}</strong>
+            <span class="block text-[11px] text-slate-400">باقة ${item.tier} • المدة: ${item.days} يوم • ${item.createdAt}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="copyToClipboard('${item.key}', 'كود التفعيل')" class="px-2.5 py-1.5 rounded-lg bg-sky-600 text-white font-bold">نسخ</button>
+            <button onclick="fillLicenseIntoActivation('${item.key}')" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white font-bold">تعبئة في التفعيل</button>
+          </div>
+        </div>
+      `).join('');
+
+      openModal('👑 لوحة إدارة التراخيص والاشتراكات (Super Admin)', `
+        <div class="space-y-4 text-xs sm:text-sm">
+          <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
+            <span class="text-xs font-bold text-emerald-400">بصمة الجهاز: <code class="font-mono">${State.deviceFp}</code></span>
+            <button onclick="openClientPortalModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">
+              🔍 فتح بوابة استعلام الموكلين
+            </button>
+          </div>
+
+          <form onsubmit="handleGenerateNewLicenseCode(event)" class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
+            <h4 class="font-black text-amber-500">توليد كود اشتراك مشفّر جديد</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <select name="tier" class="px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs">
+                <option value="BASIC">BASIC (محامي فردي)</option>
+                <option value="PRO" selected>PRO (مكتب متكامل)</option>
+                <option value="ENTERPRISE">ENTERPRISE (مؤسسات)</option>
+              </select>
+              <select name="days" class="px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs">
+                <option value="7">7 أيام (تجريبي)</option>
+                <option value="30">30 يوماً (شهري)</option>
+                <option value="365" selected>365 يوماً (سنوي)</option>
+                <option value="3650">10 سنوات (مفتوح)</option>
+              </select>
+              <button type="submit" class="py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs">
+                ⚡ توليد الكود
+              </button>
+            </div>
+          </form>
+
+          ${State.licenseInfo ? `
+            <div class="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-300/60 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+              <div>
+                <strong>حالة الاشتراك الحالي على هذا الجهاز:</strong>
+                <span class="block text-slate-400">${State.licenseInfo.manualReadOnlyLock ? '🔒 مقفل (قراءة فقط)' : '✅ نشط ومفعّل'}</span>
+              </div>
+              <button onclick="toggleManualReadOnlyLock()" class="px-3 py-1.5 rounded-xl bg-rose-600 text-white font-bold">
+                ${State.licenseInfo.manualReadOnlyLock ? '🔓 فك القفل' : '🔒 تفعيل وضع القراءة فقط'}
+              </button>
+            </div>
+          ` : ''}
+
+          <div class="space-y-2 max-h-[35vh] overflow-y-auto">
+            <h4 class="font-bold text-xs text-slate-400">الأكواد المولّدة (${State.generatedLicenses.length})</h4>
+            ${listHtml || '<p class="text-xs text-slate-400 text-center py-3">لم يتم توليد أكواد بعد.</p>'}
+          </div>
+        </div>
+      `, 'max-w-xl');
+    }
+
+    function unlockSuperAdmin(e) {
+      e.preventDefault();
+      const val = document.getElementById('sa-pass-input')?.value || '';
+      if (verifyAdminPasscode(val)) {
+        State.superAdminUnlocked = true;
+        SoundFX.play('success');
+        openSuperAdminModal();
+      } else {
+        SoundFX.play('error');
+        showToast('كلمة المرور غير صحيحة!', 'error');
+      }
+    }
+
+    async function handleGenerateNewLicenseCode(e) {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const tier = fd.get('tier');
+      const days = parseInt(fd.get('days'), 10) || 365;
+      const key = generateSignedLicenseKey(tier, days);
+
+      State.generatedLicenses.push({
+        key,
+        tier,
+        days,
+        createdAt: new Date().toLocaleString('ar-EG')
+      });
+      await MizanDB.setMeta('generatedLicenses', State.generatedLicenses);
+      copyToClipboard(key, 'كود الاشتراك الجديد');
+      openSuperAdminModal();
+    }
+
+    function fillLicenseIntoActivation(key) {
+      closeModal();
+      showAuthScreen();
+      switchAuthTab('activate');
+      const inp = document.getElementById('act-license-key');
+      if (inp) inp.value = key;
+      showToast('تم وضع الكود في خانة التفعيل.', 'info');
+    }
+
+    async function toggleManualReadOnlyLock() {
+      if (!State.licenseInfo) return;
+      State.licenseInfo.manualReadOnlyLock = !State.licenseInfo.manualReadOnlyLock;
+      await MizanDB.setMeta('licenseInfo', State.licenseInfo);
+      updateLockBanners();
+      openSuperAdminModal();
+      renderWorkspace();
+    }
+
+    // تشغيل النظام فور اكتمال تحميل الصفحة
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
